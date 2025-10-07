@@ -13,6 +13,7 @@ def test():
     return {"message": "Backend Flask prêt"}
 
 @app.route("/lobby")
+
 @socketio.on("connect")
 def on_connect():
     print("✅ Un client est connecté !")
@@ -33,15 +34,30 @@ def join_room_event(data):
     print(f"👤 {username} a rejoint la salle {room}")
 
     emit("server_message", {"msg": f"{username} a rejoint la salle {room}"}, to=room)
-@socketio.on("join_room")
-def join(data):
+
+@socketio.on("player_ready")
+def player_ready(data):
     username = data.get("username")
     room = data.get("room")
-    join_room(room)
-    rooms.setdefault(room, {"users": set(), "timer": 0, "thread": None})
-    rooms[room]["users"].add(username)
-    emit("server_message", {"msg": f"{username} a rejoint {room}."}, room=room)
-    print(f"[JOIN] {username} → {room}")
+    role = data.get("role")
+    
+    if room not in rooms:
+        rooms[room] = {"users": set(), "timer": 0, "thread": None, "ready_players": {}}
+    
+    # Ajouter le joueur comme prêt
+    rooms[room]["ready_players"][username] = {"role": role, "ready": True}
+    
+    emit("server_message", {"msg": f"{username} ({role}) est prêt !"}, room=room)
+    emit("player_status_update", {
+        "ready_players": list(rooms[room]["ready_players"].keys()),
+        "total_ready": len(rooms[room]["ready_players"])
+    }, room=room)
+    
+    # Vérifier si 2 joueurs sont prêts
+    if len(rooms[room]["ready_players"]) >= 2:
+        emit("all_players_ready", {"msg": "Tous les joueurs sont prêts ! Lancement du jeu..."}, room=room)
+        print(f"[GAME START] Room {room} - 2 joueurs prêts")
+
 
 @socketio.on("chat_message")
 def chat(data):
