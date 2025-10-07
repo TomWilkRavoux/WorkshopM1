@@ -1,5 +1,5 @@
-from flask import Flask, request
-from flask_socketio import SocketIO, join_room, emit
+from flask import Flask
+from flask_socketio import SocketIO, emit, join_room, leave_room
 import time
 import threading
 
@@ -10,7 +10,7 @@ rooms = {}
 
 @app.route("/api/test")
 def test():
-    return {"message": "Backend Flask est prêt avec Socket.IO !"}
+    return {"message": "Backend Flask prêt"}
 
 @app.route("/lobby")
 @socketio.on("connect")
