@@ -83,8 +83,7 @@ export default function MedecinPage() {
   socket.emit("symptome_envoi", {
     username,
     room,
-    maladie: selectedMaladie,
-    symptome: selectedSymptome
+    maladie: selectedMaladie
   });
 };
 
@@ -123,80 +122,118 @@ export default function MedecinPage() {
           <strong>Room:</strong> {room}
         </p>
       </div>
+        {/* Zone de description */}
+        <div
+        style={{
+            background: "white",
+            padding: "2rem",
+            borderRadius: "10px",
+            marginBottom: "2rem",
+            border: "3px solid #4A90E2",
+        }}
+        >
+        <h2>🧾 Maladies et Symptômes</h2>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+            {Object.entries(maladies).map(([maladie, symptomes]) => (
+            <div
+                key={maladie}
+                style={{
+                flex: "0 0 48%", // 2 maladies par ligne
+                border: "1px solid #ccc",
+                borderRadius: "8px",
+                padding: "10px",
+                backgroundColor: "#f0f8ff",
+                marginBottom: "10px",
+                }}
+            >
+                <strong>{maladie}</strong>
+                <div
+                style={{
+                    marginTop: "8px",
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "5px",
+                    justifyContent: "center", // centre les symptômes horizontalement
+                }}
+                >
+                {symptomes.map((symptome, i) => (
+                    <span
+                    key={i}
+                    style={{
+                        flex: "0 0 48%", // 2 symptômes par ligne
+                        padding: "5px 8px",
+                        borderRadius: "12px",
+                        backgroundColor: "#d1e7dd",
+                        fontSize: "0.9rem",
+                        textAlign: "center", // centre le texte dans la pill
+                    }}
+                    >
+                    {symptome}
+                    </span>
+                ))}
+                </div>
+            </div>
+            ))}
+        </div>
+        </div>
 
       {/* Zone de diagnostic */}
-      <div
-        style={{
-          background: "white",
-          padding: "1.5rem",
-          borderRadius: "10px",
-          marginBottom: "2rem",
-        }}
-      >
-        <h2>📋 Zone de Diagnostic</h2>
+<div
+  style={{
+    background: "white",
+    padding: "1.5rem",
+    borderRadius: "10px",
+    marginBottom: "2rem",
+  }}
+>
+  <h2>📋 Zone de Diagnostic</h2>
 
-        {/* Sélecteur de maladie */}
-        <label>
-          Choisir une maladie :
-          <select
-            value={selectedMaladie}
-            onChange={(e) =>
-              setSelectedMaladie(e.target.value as MaladieKey | "")
-            }
-            style={{
-              display: "block",
-              width: "100%",
-              padding: "10px",
-              marginTop: "8px",
-              marginBottom: "12px",
-            }}
-          >
-            <option value="">-- Sélectionnez une maladie --</option>
-            {Object.keys(maladies).map((maladie) => (
-              <option key={maladie} value={maladie}>
-                {maladie}
-              </option>
-            ))}
-          </select>
-        </label>
+  {/* Sélecteur de maladie */}
+  <label>
+    Choisir une maladie :
+    <select
+      value={selectedMaladie}
+      onChange={(e) =>
+        setSelectedMaladie(e.target.value as MaladieKey | "")
+      }
+      style={{
+        display: "block",
+        width: "100%",
+        padding: "10px",
+        marginTop: "8px",
+        marginBottom: "12px",
+        borderRadius: "8px",
+        border: "1px solid #ccc",
+        backgroundColor: "#f0f8ff", // fond bleu clair similaire aux blocs maladies
+        color: "#000", // texte noir pour contraste
+        fontWeight: 500,
+      }}
+    >
+      <option value="">-- Sélectionnez une maladie --</option>
+      {Object.keys(maladies).map((maladie) => (
+        <option key={maladie} value={maladie}>
+          {maladie}
+        </option>
+      ))}
+    </select>
+  </label>
 
-        {/* Sélecteur de symptôme */}
-        {selectedMaladie && (
-          <label>
-            Choisir un symptôme :
-            <select
-              value={selectedSymptome}
-              onChange={(e) => setSelectedSymptome(e.target.value)}
-              style={{
-                display: "block",
-                width: "100%",
-                padding: "10px",
-                marginTop: "8px",
-              }}
-            >
-              <option value="">-- Sélectionnez un symptôme --</option>
-              {maladies[selectedMaladie].map((symptome) => (
-                <option key={symptome} value={symptome}>
-                  {symptome}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+  <button
+    onClick={sendSymptome}
+    style={{
+      marginTop: "15px",
+      padding: "10px 20px",
+      backgroundColor: "#28a745",
+      color: "white",
+      border: "none",
+      borderRadius: "5px",
+      cursor: "pointer",
+    }}
+  >
+    📤 Envoyer au Pharmacien
+  </button>
+</div>
 
-        <button onClick={sendSymptome} style={{
-                marginTop: "15px",
-                padding: "10px 20px",
-                backgroundColor: "#28a745",
-                color: "white",
-                border: "none",
-                borderRadius: "5px",
-                cursor: "pointer"
-            }}
-            >
-            📤 Envoyer au Pharmacien
-        </button>
-      </div>
 
       {/* Chat */}
       <div
