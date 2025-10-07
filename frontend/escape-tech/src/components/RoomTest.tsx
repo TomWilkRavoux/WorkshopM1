@@ -120,6 +120,9 @@ function RoomTest() {
                     placeholder="Écris un message"
                     value={message}
                     onChange={handleChange(setMessage)}
+                    onKeyDown={(e) => {
+                    if (e.key === "Enter") sendMessage();
+                    }}
                     className="border p-2 w-full mb-2"
                 />
                 <div className="flex gap-2">
