@@ -45,9 +45,18 @@ export default function Lobby() {
     socket.on("all_players_ready", (data: ServerMessage) => {
       console.log("🎮 Tous les joueurs sont prêts !");
       setGameStarted(true);
-      // Redirection après 2 secondes
+      
+      // Redirection après 2 secondes selon le rôle
       setTimeout(() => {
-        navigate("/room");
+        if (role === "medecin") {
+          navigate("/medecin", { 
+            state: { username, room, role } 
+          });
+        } else if (role === "pharmacien") {
+          navigate("/pharmacien", { 
+            state: { username, room, role } 
+          });
+        }
       }, 2000);
     });
 
@@ -58,7 +67,7 @@ export default function Lobby() {
       socket.off("player_status_update");
       socket.off("all_players_ready");
     };
-  }, [navigate]);
+  }, [navigate, role, username, room]);
 
   const handleReady = () => {
     if (!username || !role || !room) {
@@ -95,7 +104,7 @@ export default function Lobby() {
         justifyContent: "center"
       }}>
         <h1>🎮 Lancement du jeu...</h1>
-        <p>Redirection en cours...</p>
+        <p>Redirection vers votre interface {role}...</p>
       </div>
     );
   }
