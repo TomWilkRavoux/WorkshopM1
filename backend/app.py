@@ -4,7 +4,7 @@ import time
 import threading
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*")  # on force le serveur Flask-SocketIO sur le front React (à modifier)
 
 rooms = {}
 
@@ -12,14 +12,27 @@ rooms = {}
 def test():
     return {"message": "Backend Flask prêt"}
 
+@app.route("/lobby")
 @socketio.on("connect")
-def connect():
+def on_connect():
     print("✅ Un client est connecté !")
+    emit("server_message", {"msg": "Bienvenue sur Flask-SocketIO !"})
 
 @socketio.on("disconnect")
-def disconnect():
-    print("❌ Un client s’est déconnecté.")
+def on_disconnect():
+    print("❌ Un client s'est déconnecté.")
 
+# Test accès aux rooms
+
+@socketio.on("join_room")
+def join_room_event(data):
+    username = data.get("username")
+    room = data.get("room")
+
+    join_room(room)
+    print(f"👤 {username} a rejoint la salle {room}")
+
+    emit("server_message", {"msg": f"{username} a rejoint la salle {room}"}, to=room)
 @socketio.on("join_room")
 def join(data):
     username = data.get("username")
