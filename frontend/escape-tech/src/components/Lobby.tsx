@@ -38,6 +38,7 @@ export default function Lobby() {
     });
 
     socket.on("player_status_update", (data: PlayerStatusUpdate) => {
+      console.log("📊 Mise à jour status:", data);
       setReadyPlayers(data.ready_players);
       setTotalReady(data.total_ready);
     });
@@ -69,6 +70,13 @@ export default function Lobby() {
     };
   }, [navigate, role, username, room]);
 
+  useEffect(() => {
+    if (username && room) {
+      socket.emit("join_room", { username, room });
+      console.log(`🚪 Rejoindre la room ${room} avec ${username}`);
+    }
+  }, [username, room]);
+  
   const handleReady = () => {
     if (!username || !role || !room) {
       alert("Veuillez remplir tous les champs !");
