@@ -25,6 +25,8 @@ export default function MedecinPage() {
     
     const [message, setMessage] = useState("");
     const [messages, setMessages] = useState<string[]>([]);
+    const [symptoms, setSymptoms] = useState(""); // Nouvel état pour les symptômes
+
 
     useEffect(() => {
         // Rejoindre automatiquement la room
@@ -51,6 +53,18 @@ export default function MedecinPage() {
         if (!message.trim()) return;
         socket.emit("chat_message", { username, room, msg: message });
         setMessage("");
+    };
+
+    // Nouvelle fonction pour envoyer les symptômes
+    const sendSymptoms = () => {
+        if (!symptoms.trim()) {
+            alert("Veuillez décrire les symptômes avant d'envoyer.");
+            return;
+        }
+        
+        const symptomMessage = `📋 DIAGNOSTIC: ${symptoms}`;
+        socket.emit("chat_message", { username, room, msg: symptomMessage });
+        setSymptoms(""); // Vider le champ après envoi
     };
 
     return (
@@ -83,6 +97,7 @@ export default function MedecinPage() {
         }}>
             <h2>📋 Zone de Diagnostic</h2>
             <textarea
+            onChange={(e) => setSymptoms(e.target.value)}
             placeholder="Décrivez les symptômes du patient..."
             style={{
                 width: "100%",
@@ -93,7 +108,7 @@ export default function MedecinPage() {
                 resize: "vertical"
             }}
             />
-            <button style={{
+            <button onClick={sendSymptoms} style={{
             marginTop: "10px",
             padding: "10px 20px",
             backgroundColor: "#28a745",
