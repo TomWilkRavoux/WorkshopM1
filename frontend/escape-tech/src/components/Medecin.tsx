@@ -25,7 +25,7 @@ interface SymptomeData {
   symptome: string;
 }
 
-const [popup, setPopup] = useState<SymptomeData | null>(null);
+
 
 export default function PharmacienPage() {
     const location = useLocation();
@@ -33,12 +33,15 @@ export default function PharmacienPage() {
     
     const [message, setMessage] = useState("");
     const [messages, setMessages] = useState<string[]>([]);
+    const [popup, setPopup] = useState<SymptomeData | null>(null);
+
 
     useEffect(() => {
         // Rejoindre automatiquement la room
         socket.emit("join_room", { username, room });
 
         socket.on("symptome_envoi", (data: SymptomeData) => {
+            console.log("Popup reçu:", data);
             setPopup(data); // ouvre un popup avec le symptom envoyé par le medecin
         });
 
@@ -56,7 +59,7 @@ export default function PharmacienPage() {
         return () => {
         socket.off("server_message", handleServerMessage);
         socket.off("chat_response", handleChatResponse);
-        //socket.off("symptome_envoi");
+        socket.off("symptome_envoi");
   
         };
     }, [username, room]);
@@ -86,6 +89,28 @@ export default function PharmacienPage() {
                 <p><strong>Room:</strong> {room}</p>
                 <p><strong>Statut:</strong> En ligne</p>
             </div>
+            <div>
+      {/* popup */}
+      
+      {popup && (
+        <div style={{
+          position: "fixed",
+          top: "20%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          background: "white",
+          padding: "20px",
+          border: "2px solid #007bff",
+          borderRadius: "10px",
+          zIndex: 1000
+        }}>
+          <p>Symptôme reçu :</p>
+          <strong>{popup.symptome}</strong> pour <em>{popup.maladie}</em>
+          <br />
+          <button onClick={() => setPopup(null)}>Fermer</button>
+        </div>
+      )}
+    </div>
 
             {/* Zone des médicaments */}
             <div style={{

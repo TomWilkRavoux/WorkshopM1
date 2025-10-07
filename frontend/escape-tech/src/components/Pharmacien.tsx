@@ -79,7 +79,7 @@ export default function MedecinPage() {
   }, [username, room]);
 
   const sendSymptome = () => {
-  if (!selectedMaladie || !selectedSymptome) return;
+  if (!selectedMaladie || !selectedSymptome) return; 
   socket.emit("symptome_envoi", {
     username,
     room,
