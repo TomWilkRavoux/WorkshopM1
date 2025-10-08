@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
 
 const socket: Socket = io("http://localhost:5000");
@@ -42,10 +42,19 @@ interface GameStarted {
 const medicamentsBase: Medicament[] = [
     { nom: "Paracétamol", description: "Soulage la douleur et la fièvre. À utiliser avec modération." },
     { nom: "Ibuprofène", description: "Anti-inflammatoire efficace. À éviter en cas de problèmes gastriques." },
-    { nom: "Aspirine", description: "Fluidifie le sang et calme la douleur. Contre-indiqué chez l’enfant." },
+    { nom: "Aspirine", description: "Fluidifie le sang et calme la douleur. Contre-indiqué chez l'enfant." },
     { nom: "Antibiotique", description: "Traite les infections bactériennes. À ne pas utiliser sans prescription." },
     { nom: "Sirop", description: "Apaise la toux et adoucit la gorge. Contient souvent du sucre." },
     { nom: "Pommade", description: "Soulage les irritations ou douleurs locales sur la peau." },
+    
+    // Médicaments spécifiques pour les solutions
+    { nom: "Oseltamivir", description: "Antiviral pour traiter la grippe saisonnière." },
+    { nom: "Amoxicilline", description: "Antibiotique de première intention pour les infections bactériennes." },
+    { nom: "Régidron", description: "Solution de réhydratation orale pour les gastro-entérites." },
+    { nom: "Racécadotril", description: "Diminue la diarrhée en cas de gastro-entérite." },
+    { nom: "Vitamine D", description: "Renforce le système immunitaire, utile en cas de Covid-19." },
+    
+    // Médicaments distracteurs
     { nom: "Virocillin", description: "Parfum énergisant aux notes boisées." },
     { nom: "Ambramycin", description: "Crème hydratante pour peau citadine." },
     { nom: "Nexacill", description: "Boisson tonique aux extraits botaniques." },
@@ -63,9 +72,9 @@ const medicamentsBase: Medicament[] = [
     { nom: "Cryptofangin", description: "Parfum mystérieux aux notes ambrées." },
     { nom: "Neutravir", description: "Déodorant minéral sans aluminium." },
     { nom: "Polymazol", description: "Crème réparatrice pour peaux fatiguées." },
-    {nom:"Acide salicylique", description:"traitement des verrues plantaires"},
-    {nom:"Terbinafine ", description:"antifongique oral"},
-    {nom:"Alendronate ", description:"traite l’ostéoporose"},
+    { nom: "Acide salicylique", description: "Traitement des verrues plantaires" },
+    { nom: "Terbinafine", description: "Antifongique oral" },
+    { nom: "Alendronate", description: "Traite l'ostéoporose" },
 ];
 
 interface Notification {
@@ -76,6 +85,7 @@ interface Notification {
 
 export default function PharmacienPage() {
     const location = useLocation();
+    const navigate = useNavigate();
     const { username, room, role } = location.state as LocationState;
 
     const [message, setMessage] = useState("");
@@ -84,6 +94,8 @@ export default function PharmacienPage() {
     const [medicaments, setMedicaments] = useState<Medicament[]>([]);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [timer, setTimer] = useState<number | null>(null); // Nouveau state pour le timer
+    const [selectedMedications, setSelectedMedications] = useState<string[]>([]);
+    const [diagnosisReceived, setDiagnosisReceived] = useState<string | null>(null);
 
 
     const shuffleArray = (array: Medicament[]) => {
@@ -140,19 +152,46 @@ export default function PharmacienPage() {
                 setMessages((prev) => [...prev, `${data.username}: ${data.msg}`]);
                 }
         };
+        const handleDiagnosisSubmitted = (data: any) => {
+            setDiagnosisReceived(data.diagnosis);
+            setMessages(prev => [...prev, `[DIAGNOSTIC REÇU] ${data.username}: ${data.diagnosis}`]);
+        };
+
+        const handleMedicationSubmitted = (data: any) => {
+            setMessages(prev => [...prev, `[MÉDICAMENT] ${data.username}: ${data.medication}`]);
+        };
+
+        const handleGameResult = (data: any) => {
+            navigate("/endgame", {
+                state: {
+                    result: data.result,
+                    playerName: username,
+                    room: room,
+                    diagnosis: data.diagnosis,
+                    medications: data.medications,
+                    reason: data.reason
+                }
+            });
+        };
 
         socket.on("server_message", handleServerMessage);
         socket.on("chat_response", handleChatResponse);
         socket.on("timer_update", handleTimerUpdate);
         socket.on("game_started", handleGameStarted);
+        socket.on("diagnosis_submitted", handleDiagnosisSubmitted);
+        socket.on("medication_submitted", handleMedicationSubmitted);
+        socket.on("game_result", handleGameResult);
 
         return () => {
         socket.off("server_message", handleServerMessage);
         socket.off("chat_response", handleChatResponse);
         socket.off("timer_update", handleTimerUpdate);
         socket.off("game_started", handleGameStarted);
+        socket.off("diagnosis_submitted", handleDiagnosisSubmitted);
+        socket.off("medication_submitted", handleMedicationSubmitted);
+        socket.off("game_result", handleGameResult);
         };
-    }, [username, room]);
+    }, [username, room, navigate]);
 
     const sendMessage = () => {
         if (!message.trim()) return;
@@ -174,6 +213,32 @@ export default function PharmacienPage() {
         const minutes = Math.floor(seconds / 60);
         const secs = seconds % 60;
         return `⏱️ ${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    const selectMedication = (med: Medicament) => {
+        if (!selectedMedications.includes(med.nom)) {
+            const newMedications = [...selectedMedications, med.nom];
+            setSelectedMedications(newMedications);
+            
+            socket.emit("submit_medication", {
+                username,
+                room,
+                medication: med.nom
+            });
+        }
+    };
+
+    const validateTreatment = () => {
+        if (selectedMedications.length === 0) {
+            alert("Veuillez sélectionner au moins un médicament.");
+            return;
+        }
+        
+        socket.emit("validate_solution", { room });
+    };
+
+    const removeMedication = (medName: string) => {
+        setSelectedMedications(prev => prev.filter(name => name !== medName));
     };
 
     return (
@@ -213,29 +278,72 @@ export default function PharmacienPage() {
                 </p>
             </div>
 
+            {/* Diagnostic reçu */}
+            {diagnosisReceived && (
+                <div className="bg-blue-100 p-4 rounded-lg mb-6 border-2 border-blue-400">
+                    <h3 className="text-lg font-semibold mb-2">📋 Diagnostic reçu du médecin :</h3>
+                    <p className="text-xl font-bold text-blue-800">{diagnosisReceived}</p>
+                </div>
+            )}
+
+            {/* Médicaments sélectionnés */}
+            {selectedMedications.length > 0 && (
+                <div className="bg-yellow-100 p-4 rounded-lg mb-6 border-2 border-yellow-400">
+                    <h3 className="text-lg font-semibold mb-2">💊 Traitement sélectionné :</h3>
+                    <div className="flex flex-wrap gap-2">
+                        {selectedMedications.map((medName, index) => (
+                            <span
+                                key={index}
+                                className="bg-green-200 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2"
+                            >
+                                {medName}
+                                <button
+                                    onClick={() => removeMedication(medName)}
+                                    className="text-red-600 hover:text-red-800 font-bold"
+                                >
+                                    ×
+                                </button>
+                            </span>
+                        ))}
+                    </div>
+                    <button
+                        onClick={validateTreatment}
+                        className="mt-3 px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-bold"
+                    >
+                        ✅ Valider le traitement
+                    </button>
+                </div>
+            )}
             {/* Inventaire */}
             <div className="bg-white p-6 rounded-lg mb-8">
                 <h2 className="text-xl font-semibold mb-4">💊 Inventaire des Médicaments</h2>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
-                    {medicaments.map((med) => (
-                        <div
-                            key={med.nom}
-                            onClick={() => handleMedClick(med)}
-                            className={`p-4 rounded-lg cursor-pointer transition-all duration-300 ease-in-out ${
-                                selectedMed?.nom === med.nom
-                                    ? "bg-green-100 border-2 border-green-600 scale-110 shadow-lg"
-                                    : "bg-blue-50 border border-blue-400 scale-100"
-                            }`}
-                        >
-                            <h3 className="m-0 text-center font-medium">{med.nom}</h3>
-                            {selectedMed?.nom === med.nom && (
-                                <p className="mt-2.5 text-sm text-center text-gray-700">
-                                    {med.description}
-                                </p>
-                            )}
-                        </div>
-                    ))}
+                    {medicaments.map((med) => {
+                        const isSelected = selectedMedications.includes(med.nom);
+                        return (
+                            <div
+                                key={med.nom}
+                                onClick={() => selectMedication(med)}
+                                className={`p-4 rounded-lg cursor-pointer transition-all duration-300 ease-in-out ${
+                                    isSelected
+                                        ? "bg-green-200 border-2 border-green-600 scale-105"
+                                        : selectedMed?.nom === med.nom
+                                        ? "bg-blue-100 border-2 border-blue-600 scale-110 shadow-lg"
+                                        : "bg-blue-50 border border-blue-400 scale-100"
+                                } ${isSelected ? 'opacity-75' : ''}`}
+                            >
+                                <h3 className="m-0 text-center font-medium">
+                                    {isSelected && "✅ "}{med.nom}
+                                </h3>
+                                {(selectedMed?.nom === med.nom || isSelected) && (
+                                    <p className="mt-2.5 text-sm text-center text-gray-700">
+                                        {med.description}
+                                    </p>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
 

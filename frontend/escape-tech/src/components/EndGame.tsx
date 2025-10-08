@@ -5,18 +5,38 @@ interface EndGameState {
   result: "victory" | "defeat"; 
   playerName?: string;
   room?: string;
+  diagnosis?: string;
+  medications?: string[];
+  reason?: "timeout" | "wrong_diagnosis" | "wrong_medications";
 }
 
 export default function EndGamePage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { result, playerName, room } = (location.state || {}) as EndGameState;
+  const { result, playerName, room, diagnosis, medications, reason } = (location.state || {}) as EndGameState;
 
   const isVictory = result === "victory";
   const title = isVictory ? "🎉 Victoire !" : "💀 Défaite...";
-  const message = isVictory
-    ? "Félicitations ! Vous avez réussi à sauver la situation dans le temps imparti."
-    : "Malheureusement, le temps est écoulé... La mission a échoué.";
+  
+  let message = "";
+  if (isVictory) {
+    message = "Félicitations ! Vous avez réussi à sauver le patient avec le bon diagnostic et le bon traitement !";
+  } else {
+    switch (reason) {
+      case "timeout":
+        message = "Le temps est écoulé ! Le patient n'a pas pu être soigné à temps...";
+        break;
+      case "wrong_diagnosis":
+        message = "Le diagnostic était incorrect. Le patient n'a pas reçu le bon traitement...";
+        break;
+      case "wrong_medications":
+        message = "Le diagnostic était correct mais les médicaments prescrits étaient inadaptés...";
+        break;
+      default:
+        message = "Malheureusement, la mission a échoué...";
+    }
+  }
+
   const color = isVictory ? "#4CAF50" : "#E53935";
   const bg = isVictory
     ? "linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%)"
@@ -47,7 +67,7 @@ export default function EndGamePage() {
           borderRadius: "20px",
           padding: "3rem",
           boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2)",
-          maxWidth: "500px",
+          maxWidth: "600px",
           width: "90%",
           border: `4px solid ${color}`,
         }}
@@ -71,6 +91,30 @@ export default function EndGamePage() {
           </p>
         )}
 
+        {/* Détails de la partie */}
+        {diagnosis && (
+          <div style={{ 
+            marginTop: "1.5rem", 
+            padding: "1rem", 
+            backgroundColor: "#f5f5f5", 
+            borderRadius: "10px",
+            textAlign: "left"
+          }}>
+            <h3 style={{ marginBottom: "0.5rem" }}>📋 Résumé de la partie :</h3>
+            <p><strong>Diagnostic :</strong> {diagnosis}</p>
+            {medications && medications.length > 0 && (
+              <div>
+                <strong>Médicaments prescrits :</strong>
+                <ul style={{ marginTop: "0.5rem", paddingLeft: "1.5rem" }}>
+                  {medications.map((med, index) => (
+                    <li key={index}>{med}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
         <div style={{ marginTop: "2rem", display: "flex", gap: "1rem", justifyContent: "center" }}>
           <button
             onClick={() => navigate("/")}
@@ -85,7 +129,7 @@ export default function EndGamePage() {
               fontSize: "1rem",
             }}
           >
-            Retour à l’accueil
+            Retour à l'accueil
           </button>
 
           <button

@@ -6,6 +6,14 @@ import threading
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")  # on force le serveur Flask-SocketIO sur le front React (à modifier)
 
+# Solutions correctes pour chaque maladie
+SOLUTIONS = {
+    "Grippe saisonnière": ["Paracétamol", "Oseltamivir"],
+    "Angine bactérienne": ["Amoxicilline", "Paracétamol"],
+    "Gastro-entérite": ["Régidron", "Racécadotril"],
+    "Covid-19 (forme légère)": ["Paracétamol", "Vitamine D"]
+}
+
 rooms = {}
 
 @app.route("/api/test")
@@ -42,7 +50,15 @@ def player_ready(data):
     role = data.get("role")
     
     if room not in rooms:
-        rooms[room] = {"users": set(), "timer": 0, "thread": None, "ready_players": {}}
+        rooms[room] = {
+            "users": set(), 
+            "timer": 0, 
+            "thread": None, 
+            "ready_players": {},
+            "diagnosis": None,
+            "medications": [],
+            "game_over": False
+        }
     
     # Ajouter le joueur comme prêt
     rooms[room]["ready_players"][username] = {"role": role, "ready": True}
@@ -66,6 +82,90 @@ def player_ready(data):
         
         print(f"[GAME START] Room {room} - 2 joueurs prêts, timer lancé")
 
+##########################################################################################################################################################
+@socketio.on("submit_diagnosis")
+def submit_diagnosis(data):
+    username = data.get("username")
+    room = data.get("room")
+    diagnosis = data.get("diagnosis")
+    
+    if room not in rooms or rooms[room]["game_over"]:
+        return
+    
+    rooms[room]["diagnosis"] = diagnosis
+    print(f"[DIAGNOSIS] {room} - {username}: {diagnosis}")
+    
+    emit("diagnosis_submitted", {
+        "username": username,
+        "diagnosis": diagnosis
+    }, room=room)
+
+@socketio.on("submit_medication")
+def submit_medication(data):
+    username = data.get("username")
+    room = data.get("room")
+    medication = data.get("medication")
+    
+    if room not in rooms or rooms[room]["game_over"]:
+        return
+    
+    if medication not in rooms[room]["medications"]:
+        rooms[room]["medications"].append(medication)
+    
+    print(f"[MEDICATION] {room} - {username}: {medication}")
+    
+    emit("medication_submitted", {
+        "username": username,
+        "medication": medication,
+        "current_medications": rooms[room]["medications"]
+    }, room=room)
+
+@socketio.on("validate_solution")
+def validate_solution(data):
+    room = data.get("room")
+    
+    if room not in rooms or rooms[room]["game_over"]:
+        return
+    
+    diagnosis = rooms[room]["diagnosis"]
+    medications = rooms[room]["medications"]
+    
+    # Vérifier si la solution est correcte
+    if diagnosis in SOLUTIONS:
+        correct_medications = SOLUTIONS[diagnosis]
+        is_correct = set(medications) == set(correct_medications)
+        
+        if is_correct:
+            # Victoire !
+            rooms[room]["game_over"] = True
+            rooms[room]["timer"] = 0
+            emit("game_result", {
+                "result": "victory",
+                "diagnosis": diagnosis,
+                "medications": medications
+            }, room=room)
+        else:
+            # Défaite - mauvais médicaments
+            rooms[room]["game_over"] = True
+            rooms[room]["timer"] = 0
+            emit("game_result", {
+                "result": "defeat",
+                "reason": "wrong_medications",
+                "diagnosis": diagnosis,
+                "medications": medications,
+                "correct_medications": correct_medications
+            }, room=room)
+    else:
+        # Défaite - mauvais diagnostic
+        rooms[room]["game_over"] = True
+        rooms[room]["timer"] = 0
+        emit("game_result", {
+            "result": "defeat",
+            "reason": "wrong_diagnosis",
+            "diagnosis": diagnosis,
+            "medications": medications
+        }, room=room)
+##########################################################################################################################################################
 
 @socketio.on("chat_message")
 def chat(data):
@@ -78,11 +178,19 @@ def chat(data):
 def start_timer(room, duration):
     print(f"[TIMER] Lancement du timer {duration}s pour {room}")
     rooms[room]["timer"] = duration
-    while rooms[room]["timer"] > 0:
+    while rooms[room]["timer"] > 0 and not rooms[room]["game_over"]:
         time.sleep(1)
         rooms[room]["timer"] -= 1
         socketio.emit("timer_update", {"time": rooms[room]["timer"]}, room=room)
-    socketio.emit("server_message", {"msg": "Temps écoulé !"}, room=room)
+    
+    if not rooms[room]["game_over"]:
+        # Temps écoulé = défaite
+        rooms[room]["game_over"] = True
+        socketio.emit("game_result", {
+            "result": "defeat",
+            "reason": "timeout"
+        }, room=room)
+    
     rooms[room]["thread"] = None
 
 @socketio.on("start_game")

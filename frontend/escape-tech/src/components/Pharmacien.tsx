@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useEffect, useState,  } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
+
 
 // Ajout de l'import des images
 import patient1 from "../assets/toux_ses_grands_morts.png";
@@ -68,13 +69,14 @@ const maladies = {
     ],
 } as const;
 
-// type MaladieKey = keyof typeof maladies;
+type MaladieKey = keyof typeof maladies;
 // Tableau des images des patients
 const patientImages = [patient1, patient2, patient3, patient4];
 
 
 export default function MedecinPage() {
     const location = useLocation();
+    const navigate = useNavigate();
     const { username, room } = location.state as LocationState;
 
     // const [selectedMaladie, setSelectedMaladie] = useState<MaladieKey | "">("");
@@ -85,6 +87,10 @@ export default function MedecinPage() {
     const [currentPatientImage, setCurrentPatientImage] = useState("");
     const [isImageZoomed, setIsImageZoomed] = useState(false); // Nouvel état pour le zoom
     const [timer, setTimer] = useState<number | null>(null); // Nouveau state pour le timer
+    const [diagnosisSubmitted, setDiagnosisSubmitted] = useState(false);
+    const [selectedMaladie, setSelectedMaladie] = useState<MaladieKey | "">("");
+
+
 
 
 
@@ -115,18 +121,47 @@ export default function MedecinPage() {
         const handleChatResponse = (data: ChatResponse) => {
         setMessages((prev) => [...prev, `${data.username}: ${data.msg}`]);
         };
+
+        const handleGameResult = (data: any) => {
+            console.log("[MEDECIN] Game result reçu:", data);
+            navigate("/endgame", {
+                state: {
+                    result: data.result,
+                    playerName: username,
+                    room: room,
+                    diagnosis: data.diagnosis,
+                    medications: data.medications,
+                    reason: data.reason
+                }
+            });
+        };
+
+        // ✅ Écouter les événements de diagnostic du pharmacien
+        const handleDiagnosisSubmitted = (data: any) => {
+            setMessages(prev => [...prev, `[INFO] Diagnostic envoyé: ${data.diagnosis}`]);
+        };
+
+        const handleMedicationSubmitted = (data: any) => {
+            setMessages(prev => [...prev, `[INFO] Médicament ajouté: ${data.medication}`]);
+        };
         socket.on("server_message", handleServerMessage);
         socket.on("chat_response", handleChatResponse);
         socket.on("timer_update", handleTimerUpdate);
         socket.on("game_started", handleGameStarted);
+        socket.on("game_result", handleGameResult); // ← IMPORTANT
+        socket.on("diagnosis_submitted", handleDiagnosisSubmitted);
+        socket.on("medication_submitted", handleMedicationSubmitted);
 
         return () => {
         socket.off("server_message", handleServerMessage);
         socket.off("chat_response", handleChatResponse);
         socket.off("timer_update", handleTimerUpdate);
         socket.off("game_started", handleGameStarted);
+        socket.off("game_result", handleGameResult); // ← IMPORTANT
+        socket.off("diagnosis_submitted", handleDiagnosisSubmitted);
+        socket.off("medication_submitted", handleMedicationSubmitted);
         };
-    }, [username, room]);
+    }, [username, room, navigate]);
 
 
     const toggleImageZoom = () => {
@@ -150,32 +185,6 @@ export default function MedecinPage() {
         socket.emit("chat_message", { username, room, msg: symptomMessage });
         setSymptoms(""); // Vider le champ après envoi
     };
-    // // Fonction pour notif diagnostic
-    // const handleChatResponse = (data: ChatResponse) => {
-    //     // Vérifier si c'est un diagnostic
-    //     if (data.msg.startsWith("📋 DIAGNOSTIC:")) {
-    //         // Créer une notification au lieu d'ajouter au chat
-    //         const newNotification: Notification = {
-    //             id: Date.now(),
-    //             message: data.msg.replace("📋 DIAGNOSTIC:", "").trim(),
-    //             timestamp: new Date()
-    //         };
-    //         setNotifications(prev => [...prev, newNotification]);
-                
-    //             // Auto-suppression après 10 secondes
-    //         setTimeout(() => {
-    //             setNotifications(prev => prev.filter(notif => notif.id !== newNotification.id));
-    //         }, 10000);
-    //     } else {
-    //         // Messages normaux dans le chat
-    //         setMessages((prev) => [...prev, `${data.username}: ${data.msg}`]);
-    //     }
-    // };
-
-    // Fonction pour supprimer une notification manuellement
-    // const removeNotification = (id: number) => {
-    //     setNotifications(prev => prev.filter(notif => notif.id !== id));
-    // };
 
 
     // Fonction pour formater le temps en MM:SS
@@ -186,33 +195,23 @@ export default function MedecinPage() {
         return `⏱️ ${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
+    const submitDiagnosis = () => {
+        if (!selectedMaladie) {
+            alert("Veuillez sélectionner une maladie avant de valider le diagnostic.");
+            return;
+        }
+        
+        socket.emit("submit_diagnosis", { 
+            username, 
+            room, 
+            diagnosis: selectedMaladie 
+        });
+        
+        setDiagnosisSubmitted(true);
+        setMessages(prev => [...prev, `[DIAGNOSTIC] Vous avez diagnostiqué: ${selectedMaladie}`]);
+    };
     return (
         <div className="p-8 max-w-4xl mx-auto min-h-screen bg-blue-50">
-            {/* Notifications en haut à droite */}
-            {/* <div className="fixed top-4 right-4 z-40 space-y-2">
-                {notifications.map((notification) => (
-                    <div
-                        key={notification.id}
-                        className="bg-green-500 text-white p-4 rounded-lg shadow-lg max-w-sm animate-slide-in"
-                    >
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <h4 className="font-bold text-sm">📋 Nouveau Diagnostic</h4>
-                                <p className="text-sm mt-1">{notification.message}</p>
-                                <p className="text-xs opacity-75 mt-1">
-                                    {notification.timestamp.toLocaleTimeString()}
-                                </p>
-                            </div>
-                            <button
-                                onClick={() => removeNotification(notification.id)}
-                                className="text-white hover:text-gray-200 text-lg font-bold ml-2"
-                            >
-                                ×
-                            </button>
-                        </div>
-                    </div>
-                ))}
-            </div> */}
             <div className="bg-white p-8 rounded-lg mb-8 border-4 border-blue-400">
                 <h1 className="text-2xl font-bold">👨‍⚕️ Interface Médecin</h1>
                 <p>
@@ -286,20 +285,54 @@ export default function MedecinPage() {
 
             {/* Zone de diagnostic */}
             <div className="bg-white p-6 rounded-lg mb-8">
-                <h2 className="text-xl font-semibold mb-4">📋 Zone de Diagnostic</h2>
+                <h2 className="text-xl font-semibold mb-4">📋 Diagnostic Final</h2>
+                
+                <div className="mb-4">
+                    <label className="block text-sm font-medium mb-2">Sélectionnez la maladie :</label>
+                    <select
+                        value={selectedMaladie}
+                        onChange={(e) => setSelectedMaladie(e.target.value as MaladieKey)}
+                        disabled={diagnosisSubmitted}
+                        className="w-full p-2.5 rounded border border-gray-300"
+                    >
+                        <option value="">-- Choisir une maladie --</option>
+                        {Object.keys(maladies).map((maladie) => (
+                            <option key={maladie} value={maladie}>
+                                {maladie}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
                 <textarea
                     value={symptoms}
                     onChange={(e) => setSymptoms(e.target.value)}
                     placeholder="Décrivez les symptômes du patient..."
-                    className="w-full h-30 p-2.5 rounded border border-gray-300 resize-y"
+                    className="w-full h-30 p-2.5 rounded border border-gray-300 resize-y mb-2"
                 />
-                <button 
-                    onClick={sendSymptoms} 
-                    className="mt-2.5 px-5 py-2.5 bg-green-600 text-white border-none rounded cursor-pointer hover:bg-green-700"
-                >
-                    📤 Envoyer au Pharmacien
-                </button>
+
+                <div className="flex gap-2">
+                    <button 
+                        onClick={sendSymptoms} 
+                        className="px-5 py-2.5 bg-blue-600 text-white border-none rounded cursor-pointer hover:bg-blue-700"
+                    >
+                        📤 Envoyer au Pharmacien
+                    </button>
+                    
+                    <button 
+                        onClick={submitDiagnosis}
+                        disabled={diagnosisSubmitted || !selectedMaladie}
+                        className={`px-5 py-2.5 border-none rounded cursor-pointer ${
+                            diagnosisSubmitted 
+                                ? 'bg-gray-400 text-white cursor-not-allowed' 
+                                : 'bg-green-600 text-white hover:bg-green-700'
+                        }`}
+                    >
+                        {diagnosisSubmitted ? "✅ Diagnostic envoyé" : "🏥 Valider le diagnostic"}
+                    </button>
+                </div>
             </div>
+
 
             {/* Chat */}
             <div className="bg-white p-6 rounded-lg">
