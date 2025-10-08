@@ -24,6 +24,12 @@ interface Medicament {
   description: string;
 }
 
+interface Notification {
+    id: number;
+    message: string;
+    timestamp: Date;
+}
+
 // Liste complète des médicaments
 const medicamentsBase: Medicament[] = [
   { nom: "Paracétamol", description: "Soulage la douleur et la fièvre. À utiliser avec modération." },
@@ -61,13 +67,15 @@ interface Notification {
 }
 
 export default function PharmacienPage() {
-  const location = useLocation();
-  const { username, room, role } = location.state as LocationState;
+    const location = useLocation();
+    const { username, room, role } = location.state as LocationState;
 
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<string[]>([]);
-  const [selectedMed, setSelectedMed] = useState<Medicament | null>(null);
-  const [medicaments, setMedicaments] = useState<Medicament[]>([]);
+    const [message, setMessage] = useState("");
+    const [messages, setMessages] = useState<string[]>([]);
+    const [selectedMed, setSelectedMed] = useState<Medicament | null>(null);
+    const [medicaments, setMedicaments] = useState<Medicament[]>([]);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+
 
   const shuffleArray = (array: Medicament[]) => {
     const arr = [...array];
@@ -81,7 +89,7 @@ export default function PharmacienPage() {
   useEffect(() => {
     setMedicaments(shuffleArray(medicamentsBase));
   }, []);
-    const [notifications, setNotifications] = useState<Notification[]>([]);
+    // const [notifications, setNotifications] = useState<Notification[]>([]);
 
   useEffect(() => {
     socket.emit("join_room", { username, room });
@@ -134,6 +142,9 @@ export default function PharmacienPage() {
     if (selectedMed?.nom === med.nom) setSelectedMed(null);
     else setSelectedMed(med);
   };
+    const removeNotification = (id: number) => {
+        setNotifications(prev => prev.filter(notif => notif.id !== id));
+    };
 
   return (
     <div
@@ -145,6 +156,30 @@ export default function PharmacienPage() {
         background: "#f0fff0",
       }}
     >
+            <div className="fixed top-4 right-4 z-40 space-y-2">
+                {notifications.map((notification) => (
+                    <div
+                        key={notification.id}
+                        className="bg-green-500 text-white p-4 rounded-lg shadow-lg max-w-sm animate-slide-in"
+                    >
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <h4 className="font-bold text-sm">📋 Nouveau Diagnostic</h4>
+                                <p className="text-sm mt-1">{notification.message}</p>
+                                <p className="text-xs opacity-75 mt-1">
+                                    {notification.timestamp.toLocaleTimeString()}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => removeNotification(notification.id)}
+                                className="text-white hover:text-gray-200 text-lg font-bold ml-2"
+                            >
+                                ×
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>        
       {/* En-tête */}
       <div
         style={{

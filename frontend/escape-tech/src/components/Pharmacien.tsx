@@ -75,7 +75,6 @@ export default function MedecinPage() {
     const [symptoms, setSymptoms] = useState(""); // Nouvel état pour les symptômes
     const [currentPatientImage, setCurrentPatientImage] = useState("");
     const [isImageZoomed, setIsImageZoomed] = useState(false); // Nouvel état pour le zoom
-    const [notifications, setNotifications] = useState<Notification[]>([]); // Nouveau state pour les notifications
 
 
 
@@ -96,27 +95,6 @@ export default function MedecinPage() {
         const handleChatResponse = (data: ChatResponse) => {
         setMessages((prev) => [...prev, `${data.username}: ${data.msg}`]);
         };
-        // Fonction pour notif diagnostic
-        // const handleChatResponse = (data: ChatResponse) => {
-        //     // Vérifier si c'est un diagnostic
-        //     if (data.msg.startsWith("📋 DIAGNOSTIC:")) {
-        //         // Créer une notification au lieu d'ajouter au chat
-        //         const newNotification: Notification = {
-        //             id: Date.now(),
-        //             message: data.msg.replace("📋 DIAGNOSTIC:", "").trim(),
-        //             timestamp: new Date()
-        //         };
-        //         setNotifications(prev => [...prev, newNotification]);
-                    
-        //             // Auto-suppression après 10 secondes
-        //         setTimeout(() => {
-        //             setNotifications(prev => prev.filter(notif => notif.id !== newNotification.id));
-        //         }, 10000);
-        //     } else {
-        //         // Messages normaux dans le chat
-        //         setMessages((prev) => [...prev, `${data.username}: ${data.msg}`]);
-        //     }
-        // };
         socket.on("server_message", handleServerMessage);
         socket.on("chat_response", handleChatResponse);
 
@@ -171,9 +149,9 @@ export default function MedecinPage() {
     // };
 
     // Fonction pour supprimer une notification manuellement
-    const removeNotification = (id: number) => {
-        setNotifications(prev => prev.filter(notif => notif.id !== id));
-    };
+    // const removeNotification = (id: number) => {
+    //     setNotifications(prev => prev.filter(notif => notif.id !== id));
+    // };
 
     return (
         <div className="p-8 max-w-4xl mx-auto min-h-screen bg-blue-50">
