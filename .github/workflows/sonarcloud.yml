@@ -29,7 +29,14 @@ jobs:
 
       - name: Install Frontend
         working-directory: frontend
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            echo "package-lock.json found, running npm ci"
+            npm ci || (echo "npm ci failed, trying npm install instead" && npm install --no-audit --no-fund)
+          else
+            echo "No package-lock.json found, running npm install"
+            npm install --no-audit --no-fund
+          fi
 
       - name: Test Frontend (Vitest + coverage)
         working-directory: frontend
