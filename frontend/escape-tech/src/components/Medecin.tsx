@@ -19,12 +19,19 @@ interface ServerMessage {
     msg: string;
 }
 
+interface Notification {
+    id: number;
+    message: string;
+    timestamp: Date;
+}
+
 export default function PharmacienPage() {
     const location = useLocation();
     const { username, room, role } = location.state as LocationState;
     
     const [message, setMessage] = useState("");
     const [messages, setMessages] = useState<string[]>([]);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
 
     useEffect(() => {
         // Rejoindre automatiquement la room
@@ -34,8 +41,29 @@ export default function PharmacienPage() {
         setMessages((prev) => [...prev, `[SYSTEM] ${data.msg}`]);
         };
 
+        // const handleChatResponse = (data: ChatResponse) => {
+        // setMessages((prev) => [...prev, `${data.username}: ${data.msg}`]);
+        // };
+
         const handleChatResponse = (data: ChatResponse) => {
-        setMessages((prev) => [...prev, `${data.username}: ${data.msg}`]);
+            // Vérifier si c'est un diagnostic
+            if (data.msg.startsWith("📋 DIAGNOSTIC:")) {
+                // Créer une notification au lieu d'ajouter au chat
+                const newNotification: Notification = {
+                    id: Date.now(),
+                    message: data.msg.replace("📋 DIAGNOSTIC:", "").trim(),
+                    timestamp: new Date()
+                };
+                setNotifications(prev => [...prev, newNotification]);
+                
+                // Auto-suppression après 10 secondes
+                setTimeout(() => {
+                    setNotifications(prev => prev.filter(notif => notif.id !== newNotification.id));
+                }, 10000);
+            } else {
+                // Messages normaux dans le chat
+                setMessages((prev) => [...prev, `${data.username}: ${data.msg}`]);
+            }
         };
 
         socket.on("server_message", handleServerMessage);
@@ -52,8 +80,37 @@ export default function PharmacienPage() {
         setMessage("");
     };  
 
+    const removeNotification = (id: number) => {
+        setNotifications(prev => prev.filter(notif => notif.id !== id));
+    };
+
     return (
         <div className="p-8 max-w-3xl mx-auto min-h-screen bg-green-50">
+            {/* Notifications en haut à droite */}
+            <div className="fixed top-4 right-4 z-40 space-y-2">
+                {notifications.map((notification) => (
+                    <div
+                        key={notification.id}
+                        className="bg-green-500 text-white p-4 rounded-lg shadow-lg max-w-sm animate-slide-in"
+                    >
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <h4 className="font-bold text-sm">📋 Nouveau Diagnostic</h4>
+                                <p className="text-sm mt-1">{notification.message}</p>
+                                <p className="text-xs opacity-75 mt-1">
+                                    {notification.timestamp.toLocaleTimeString()}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => removeNotification(notification.id)}
+                                className="text-white hover:text-gray-200 text-lg font-bold ml-2"
+                            >
+                                ×
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
             <div className="bg-white p-8 rounded-lg mb-8 border-4 border-teal-400">
                 <h1 className="text-2xl font-bold">💊 Interface Pharmacien</h1>
                 <p><strong>Pharmacien:</strong> {username}</p>
