@@ -53,99 +53,53 @@ export default function PharmacienPage() {
     };  
 
     return (
-        <div style={{ 
-            padding: "2rem", 
-            maxWidth: "800px", 
-            margin: "0 auto",
-            minHeight: "100vh",
-            background: "#f0fff0"
-            }}>
-            <div style={{ 
-                background: "white", 
-                padding: "2rem", 
-                borderRadius: "10px",
-                marginBottom: "2rem",
-                border: "3px solid #50E3C2"
-            }}>
-                <h1>💊 Interface Pharmacien</h1>
+        <div className="p-8 max-w-3xl mx-auto min-h-screen bg-green-50">
+            <div className="bg-white p-8 rounded-lg mb-8 border-4 border-teal-400">
+                <h1 className="text-2xl font-bold">💊 Interface Pharmacien</h1>
                 <p><strong>Pharmacien:</strong> {username}</p>
                 <p><strong>Room:</strong> {room}</p>
                 <p><strong>Statut:</strong> En ligne</p>
             </div>
 
             {/* Zone des médicaments */}
-            <div style={{
-                background: "white",
-                padding: "1.5rem",
-                borderRadius: "10px",
-                marginBottom: "2rem"
-            }}>
-                <h2>💊 Inventaire des Médicaments</h2>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px" }}>
-                {["Paracétamol", "Ibuprofène", "Aspirine", "Antibiotique", "Sirop", "Pommade"].map((med) => (
-                    <button
-                    key={med}
-                    style={{
-                        padding: "15px",
-                        backgroundColor: "#e3f2fd",
-                        border: "1px solid #2196f3",
-                        borderRadius: "5px",
-                        cursor: "pointer"
-                    }}
-                    >
-                    {med}
-                    </button>
-                ))}
+            <div className="bg-white p-6 rounded-lg mb-8">
+                <h2 className="text-xl font-semibold mb-4">💊 Inventaire des Médicaments</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {["Paracétamol", "Ibuprofène", "Aspirine", "Antibiotique", "Sirop", "Pommade"].map((med) => (
+                        <button
+                            key={med}
+                            className="p-4 bg-blue-50 border border-blue-400 rounded cursor-pointer hover:bg-blue-100"
+                        >
+                            {med}
+                        </button>
+                    ))}
                 </div>
             </div>
 
             {/* Chat avec le médecin */}
-            <div style={{
-                background: "white",
-                padding: "1.5rem",
-                borderRadius: "10px"
-            }}>
-                <h3>💬 Communication avec le Médecin</h3>
+            <div className="bg-white p-6 rounded-lg">
+                <h3 className="text-lg font-medium mb-4">💬 Communication avec le Médecin</h3>
                 
-                <div style={{
-                    border: "1px solid #ccc",
-                    height: "200px",
-                    overflowY: "auto",
-                    padding: "10px",
-                    marginBottom: "10px",
-                    backgroundColor: "#f9f9f9"
-                }}>
+                <div className="border border-gray-300 h-50 overflow-y-auto p-2.5 mb-2.5 bg-gray-50">
                     {messages.map((msg, index) => (
-                        <div key={index} style={{ marginBottom: "5px" }}>
-                        {msg}
+                        <div key={index} className="mb-1.5">
+                            {msg}
                         </div>
                     ))}
                 </div>
 
-                <div style={{ display: "flex", gap: "10px" }}>
+                <div className="flex gap-2.5">
                     <input
                         type="text"
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                         placeholder="Écrivez votre message..."
-                        style={{
-                        flex: 1,
-                        padding: "10px",
-                        borderRadius: "5px",
-                        border: "1px solid #ccc"
-                        }}
+                        className="flex-1 p-2.5 rounded border border-gray-300"
                     />
                     <button
                         onClick={sendMessage}
-                        style={{
-                        padding: "10px 20px",
-                        backgroundColor: "#007bff",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "5px",
-                        cursor: "pointer"
-                        }}
+                        className="px-5 py-2.5 bg-blue-600 text-white border-none rounded cursor-pointer hover:bg-blue-700"
                     >
                         Envoyer
                     </button>

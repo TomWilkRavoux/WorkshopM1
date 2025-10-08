@@ -108,177 +108,88 @@ export default function MedecinPage() {
     };    
 
     return (
-        <div
-        style={{
-            padding: "2rem",
-            maxWidth: "800px",
-            margin: "0 auto",
-            minHeight: "100vh",
-            background: "#f0f8ff",
-        }}
-        >
-        <div
-            style={{
-            background: "white",
-            padding: "2rem",
-            borderRadius: "10px",
-            marginBottom: "2rem",
-            border: "3px solid #4A90E2",
-            }}
-        >
-            <h1>👨‍⚕️ Interface Médecin</h1>
-            <p>
-            <strong>Docteur:</strong> {username}
-            </p>
-            <p>
-            <strong>Room:</strong> {room}
-            </p>
-        </div>
+        <div className="p-8 max-w-4xl mx-auto min-h-screen bg-blue-50">
+            <div className="bg-white p-8 rounded-lg mb-8 border-4 border-blue-400">
+                <h1 className="text-2xl font-bold">👨‍⚕️ Interface Médecin</h1>
+                <p>
+                    <strong>Docteur:</strong> {username}
+                </p>
+                <p>
+                    <strong>Room:</strong> {room}
+                </p>
+            </div>
+
             {/* Zone de description */}
-            <div
-            style={{
-                background: "white",
-                padding: "2rem",
-                borderRadius: "10px",
-                marginBottom: "2rem",
-                border: "3px solid #4A90E2",
-            }}
-            >
-            <h2>🧾 Maladies et Symptômes</h2>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-                {Object.entries(maladies).map(([maladie, symptomes]) => (
-                <div
-                    key={maladie}
-                    style={{
-                    flex: "0 0 48%", // 2 maladies par ligne
-                    border: "1px solid #ccc",
-                    borderRadius: "8px",
-                    padding: "10px",
-                    backgroundColor: "#f0f8ff",
-                    marginBottom: "10px",
-                    }}
-                >
-                    <strong>{maladie}</strong>
-                    <div
-                    style={{
-                        marginTop: "8px",
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: "5px",
-                        justifyContent: "center", // centre les symptômes horizontalement
-                    }}
-                    >
-                    {symptomes.map((symptome, i) => (
-                        <span
-                        key={i}
-                        style={{
-                            flex: "0 0 48%", // 2 symptômes par ligne
-                            padding: "5px 8px",
-                            borderRadius: "12px",
-                            backgroundColor: "#d1e7dd",
-                            fontSize: "0.9rem",
-                            textAlign: "center", // centre le texte dans la pill
-                        }}
+            <div className="bg-white p-8 rounded-lg mb-8 border-4 border-blue-400">
+                <h2 className="text-xl font-semibold mb-4">🧾 Maladies et Symptômes</h2>
+                <div className="flex flex-wrap gap-2.5">
+                    {Object.entries(maladies).map(([maladie, symptomes]) => (
+                        <div
+                            key={maladie}
+                            className="flex-[0_0_48%] border border-gray-300 rounded-lg p-2.5 bg-blue-50 mb-2.5"
                         >
-                        {symptome}
-                        </span>
+                            <strong>{maladie}</strong>
+                            <div className="mt-2 flex flex-wrap gap-1.5 justify-center">
+                                {symptomes.map((symptome, i) => (
+                                    <span
+                                        key={i}
+                                        className="flex-[0_0_48%] py-1.5 px-2 rounded-xl bg-green-100 text-sm text-center"
+                                    >
+                                        {symptome}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
                     ))}
-                    </div>
                 </div>
-                ))}
-            </div>
             </div>
 
-        {/* Zone de diagnostic */}
-        <div style={{
-            background: "white",
-            padding: "1.5rem",
-            borderRadius: "10px",
-            marginBottom: "2rem"
-        }}>
-            <h2>📋 Zone de Diagnostic</h2>
-            <textarea
-            onChange={(e) => setSymptoms(e.target.value)}
-            placeholder="Décrivez les symptômes du patient..."
-            style={{
-                width: "100%",
-                height: "120px",
-                padding: "10px",
-                borderRadius: "5px",
-                border: "1px solid #ccc",
-                resize: "vertical"
-            }}
-            />
-            <button onClick={sendSymptoms} style={{
-            marginTop: "10px",
-            padding: "10px 20px",
-            backgroundColor: "#28a745",
-            color: "white",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer"
-            }}>
-            📤 Envoyer au Pharmacien
-            </button>
-        </div>
+            {/* Zone de diagnostic */}
+            <div className="bg-white p-6 rounded-lg mb-8">
+                <h2 className="text-xl font-semibold mb-4">📋 Zone de Diagnostic</h2>
+                <textarea
+                    value={symptoms}
+                    onChange={(e) => setSymptoms(e.target.value)}
+                    placeholder="Décrivez les symptômes du patient..."
+                    className="w-full h-30 p-2.5 rounded border border-gray-300 resize-y"
+                />
+                <button 
+                    onClick={sendSymptoms} 
+                    className="mt-2.5 px-5 py-2.5 bg-green-600 text-white border-none rounded cursor-pointer hover:bg-green-700"
+                >
+                    📤 Envoyer au Pharmacien
+                </button>
+            </div>
 
+            {/* Chat */}
+            <div className="bg-white p-6 rounded-lg">
+                <h3 className="text-lg font-medium mb-4">💬 Communication avec le Pharmacien</h3>
 
-        {/* Chat */}
-        <div
-            style={{
-            background: "white",
-            padding: "1.5rem",
-            borderRadius: "10px",
-            }}
-        >
-            <h3>💬 Communication avec le Pharmacien</h3>
-
-            <div
-            style={{
-                border: "1px solid #ccc",
-                height: "200px",
-                overflowY: "auto",
-                padding: "10px",
-                marginBottom: "10px",
-                backgroundColor: "#f9f9f9",
-            }}
-            >
-            {messages.map((msg, index) => (
-                <div key={index} style={{ marginBottom: "5px" }}>
-                {msg}
+                <div className="border border-gray-300 h-50 overflow-y-auto p-2.5 mb-2.5 bg-gray-50">
+                    {messages.map((msg, index) => (
+                        <div key={index} className="mb-1.5">
+                            {msg}
+                        </div>
+                    ))}
                 </div>
-            ))}
-            </div>
 
-            <div style={{ display: "flex", gap: "10px" }}>
-            <input
-                type="text"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                placeholder="Écrivez votre message..."
-                style={{
-                flex: 1,
-                padding: "10px",
-                borderRadius: "5px",
-                border: "1px solid #ccc",
-                }}
-            />
-            <button
-                onClick={sendMessage}
-                style={{
-                padding: "10px 20px",
-                backgroundColor: "#007bff",
-                color: "white",
-                border: "none",
-                borderRadius: "5px",
-                cursor: "pointer",
-                }}
-            >
-                Envoyer
-            </button>
+                <div className="flex gap-2.5">
+                    <input
+                        type="text"
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                        placeholder="Écrivez votre message..."
+                        className="flex-1 p-2.5 rounded border border-gray-300"
+                    />
+                    <button
+                        onClick={sendMessage}
+                        className="px-5 py-2.5 bg-blue-600 text-white border-none rounded cursor-pointer hover:bg-blue-700"
+                    >
+                        Envoyer
+                    </button>
+                </div>
             </div>
-        </div>
         </div>
     );
 }
