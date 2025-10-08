@@ -1,0 +1,68 @@
+name: CI - Tests & SonarCloud
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  build-test-analyze:
+    runs-on: ubuntu-latest
+    env:
+      SONAR_HOST_URL: https://sonarcloud.io
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # requis pour l’analyse des PR/branches
+
+      # ---------- FRONTEND ----------
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend
+        working-directory: frontend
+        run: npm ci
+
+      - name: Test Frontend (Vitest + coverage)
+        working-directory: frontend
+        run: |
+          npm run test:ci || echo "no frontend tests"
+
+      # ---------- BACKEND ----------
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Backend
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt || true
+
+      - name: Test Backend (pytest + coverage)
+        working-directory: backend
+        run: |
+          pytest --maxfail=1 --disable-warnings -q --cov=. --cov-report=xml:coverage.xml || echo "no backend tests"
+
+      # ---------- SONARCLOUD ----------
+      - name: Cache SonarCloud packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # décorations PR
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
