@@ -56,7 +56,15 @@ def player_ready(data):
     # Vérifier si 2 joueurs sont prêts
     if len(rooms[room]["ready_players"]) >= 2:
         emit("all_players_ready", {"msg": "Tous les joueurs sont prêts ! Lancement du jeu..."}, room=room)
-        print(f"[GAME START] Room {room} - 2 joueurs prêts")
+        
+        # Démarrer automatiquement le timer de 10 minutes (600 secondes)
+        if not rooms[room]["thread"]:
+            t = threading.Thread(target=start_timer, args=(room, 600))  # 10 minutes
+            rooms[room]["thread"] = t
+            t.start()
+            emit("game_started", {"msg": "🎮 Partie démarrée ! Vous avez 10 minutes.", "duration": 600}, room=room)
+        
+        print(f"[GAME START] Room {room} - 2 joueurs prêts, timer lancé")
 
 
 @socketio.on("chat_message")

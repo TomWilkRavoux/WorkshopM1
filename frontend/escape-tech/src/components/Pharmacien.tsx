@@ -32,6 +32,15 @@ interface Notification {
     timestamp: Date;
 }
 
+interface TimerUpdate {
+    time: number;
+}
+
+interface GameStarted {
+    msg: string;
+    duration: number;
+}
+
 const maladies = {
     "Grippe saisonnière": [
         "Fièvre élevée",
@@ -75,6 +84,7 @@ export default function MedecinPage() {
     const [symptoms, setSymptoms] = useState(""); // Nouvel état pour les symptômes
     const [currentPatientImage, setCurrentPatientImage] = useState("");
     const [isImageZoomed, setIsImageZoomed] = useState(false); // Nouvel état pour le zoom
+    const [timer, setTimer] = useState<number | null>(null); // Nouveau state pour le timer
 
 
 
@@ -88,6 +98,16 @@ export default function MedecinPage() {
         // Rejoindre automatiquement la room
         socket.emit("join_room", { username, room });
 
+        //Timer
+        const handleTimerUpdate = (data: TimerUpdate) => {
+            setTimer(data.time);
+        };
+
+        const handleGameStarted = (data: GameStarted) => {
+            setMessages((prev) => [...prev, `[SYSTEM] ${data.msg}`]);
+            setTimer(data.duration);
+        };
+
         const handleServerMessage = (data: ServerMessage) => {
         setMessages((prev) => [...prev, `[SYSTEM] ${data.msg}`]);
         };
@@ -97,10 +117,14 @@ export default function MedecinPage() {
         };
         socket.on("server_message", handleServerMessage);
         socket.on("chat_response", handleChatResponse);
+        socket.on("timer_update", handleTimerUpdate);
+        socket.on("game_started", handleGameStarted);
 
         return () => {
         socket.off("server_message", handleServerMessage);
         socket.off("chat_response", handleChatResponse);
+        socket.off("timer_update", handleTimerUpdate);
+        socket.off("game_started", handleGameStarted);
         };
     }, [username, room]);
 
@@ -153,6 +177,15 @@ export default function MedecinPage() {
     //     setNotifications(prev => prev.filter(notif => notif.id !== id));
     // };
 
+
+    // Fonction pour formater le temps en MM:SS
+    const formatTime = (seconds: number | null): string => {
+        if (seconds === null) return "⏱️ En attente...";
+        const minutes = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `⏱️ ${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+
     return (
         <div className="p-8 max-w-4xl mx-auto min-h-screen bg-blue-50">
             {/* Notifications en haut à droite */}
@@ -187,6 +220,9 @@ export default function MedecinPage() {
                 </p>
                 <p>
                     <strong>Room:</strong> {room}
+                </p>
+                <p className={`text-lg font-bold ${timer !== null && timer < 60 ? 'text-red-600' : 'text-green-600'}`}>
+                    {formatTime(timer)}
                 </p>
             </div>
 
