@@ -1,10 +1,9 @@
-name: CI - Tests & SonarCloud
-
 on:
   push:
     branches: ["**"]
   pull_request:
     types: [opened, synchronize, reopened]
+  workflow_dispatch: {}   # pour avoir "Run workflow"
 
 jobs:
   build-test-analyze:
@@ -17,9 +16,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # requis pour l’analyse des PR/branches
+          fetch-depth: 0
 
-      # ---------- FRONTEND ----------
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -40,10 +38,8 @@ jobs:
 
       - name: Test Frontend (Vitest + coverage)
         working-directory: frontend
-        run: |
-          npm run test:ci || echo "no frontend tests"
+        run: npm run test:ci || echo "no frontend tests"
 
-      # ---------- BACKEND ----------
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -57,10 +53,8 @@ jobs:
 
       - name: Test Backend (pytest + coverage)
         working-directory: backend
-        run: |
-          pytest --maxfail=1 --disable-warnings -q --cov=. --cov-report=xml:coverage.xml || echo "no backend tests"
+        run: pytest --maxfail=1 --disable-warnings -q --cov=. --cov-report=xml:coverage.xml || echo "no backend tests"
 
-      # ---------- SONARCLOUD ----------
       - name: Cache SonarCloud packages
         uses: actions/cache@v4
         with:
@@ -71,5 +65,5 @@ jobs:
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # décorations PR
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
