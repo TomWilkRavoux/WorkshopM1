@@ -2,6 +2,13 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
 
+// Ajout de l'import des images
+import patient1 from "../assets/toux_ses_grands_morts.png";
+import patient2 from "../assets/petite_toux.png";
+import patient3 from "../assets/mal_crane.png";
+import patient4 from "../assets/mal_gorge.png";
+
+
 const socket: Socket = io("http://localhost:5000");
 
 interface LocationState {
@@ -46,21 +53,32 @@ const maladies = {
     ],
 } as const;
 
-type MaladieKey = keyof typeof maladies;
+// type MaladieKey = keyof typeof maladies;
+// Tableau des images des patients
+const patientImages = [patient1, patient2, patient3, patient4];
 
 
 export default function MedecinPage() {
     const location = useLocation();
     const { username, room } = location.state as LocationState;
 
-    const [selectedMaladie, setSelectedMaladie] = useState<MaladieKey | "">("");
+    // const [selectedMaladie, setSelectedMaladie] = useState<MaladieKey | "">("");
     // const [selectedSymptome, setSelectedSymptome] = useState("");
     const [message, setMessage] = useState("");
     const [messages, setMessages] = useState<string[]>([]);
     const [symptoms, setSymptoms] = useState(""); // Nouvel état pour les symptômes
+    const [currentPatientImage, setCurrentPatientImage] = useState("");
+    const [isImageZoomed, setIsImageZoomed] = useState(false); // Nouvel état pour le zoom
+
+
 
 
     useEffect(() => {
+        // Sélection aléatoire d'une image au chargement du composant
+        const randomIndex = Math.floor(Math.random() * patientImages.length);
+        setCurrentPatientImage(patientImages[randomIndex]);
+
+        // Rejoindre automatiquement la room
         socket.emit("join_room", { username, room });
 
         const handleServerMessage = (data: ServerMessage) => {
@@ -80,14 +98,10 @@ export default function MedecinPage() {
         };
     }, [username, room]);
 
-    // const sendSymptome = () => {
-    //     if (!selectedMaladie || !selectedSymptome) return; 
-    //     socket.emit("symptome_envoi", {
-    //         username,
-    //         room,
-    //         maladie: selectedMaladie
-    //     });
-    // };
+
+    const toggleImageZoom = () => {
+        setIsImageZoomed(!isImageZoomed);
+    };
 
     const sendMessage = () => {
         if (!message.trim()) return;
@@ -120,6 +134,39 @@ export default function MedecinPage() {
             </div>
 
             {/* Zone de description */}
+            <div className="bg-white p-8 rounded-lg mb-8 border-4 border-blue-400">
+                <h2 className="text-xl font-semibold mb-4">🧾 El Malade</h2>
+                <div className="flex flex-wrap gap-2.5 justify-center">
+                    <img 
+                        src={currentPatientImage} 
+                        alt="Patient actuel" 
+                        className="w-48 h-48 object-cover rounded-lg border-2 border-gray-300"
+                        onClick={toggleImageZoom}
+                    />
+                </div>
+            </div>
+            {isImageZoomed && (
+                <div 
+                    className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+                    onClick={toggleImageZoom}
+                >
+                    <div className="relative max-w-3xl max-h-3xl">
+                        <img 
+                            src={currentPatientImage} 
+                            alt="Patient actuel - Zoom" 
+                            className="max-w-full max-h-full object-contain rounded-lg"
+                            onClick={(e) => e.stopPropagation()} // Empêche la fermeture au clic sur l'image
+                        />
+                        <button 
+                            className="absolute top-4 right-4 text-white text-2xl font-bold bg-red-600 rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-700"
+                            onClick={toggleImageZoom}
+                        >
+                            ×
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div className="bg-white p-8 rounded-lg mb-8 border-4 border-blue-400">
                 <h2 className="text-xl font-semibold mb-4">🧾 Maladies et Symptômes</h2>
                 <div className="flex flex-wrap gap-2.5">
