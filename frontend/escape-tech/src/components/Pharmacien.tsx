@@ -10,7 +10,7 @@ import patient3 from "../assets/mal_crane.png";
 import patient4 from "../assets/mal_gorge.png";
 
 
-const socket: Socket = io("http://localhost:5000");
+const socket: Socket = io(import.meta.env.VITE_BACKEND_URL || "http://localhost:5000");
 
 interface LocationState {
     username: string;
