@@ -1,5 +1,8 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import { io } from "socket.io-client";
+
+const socket = io("http://localhost:5000");
 
 interface EndGameState {
   result: "victory" | "defeat"; 
@@ -44,7 +47,20 @@ export default function EndGamePage() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
+    
+    // CORRECTION : Nettoyer la room quand on arrive sur EndGame
+    if (room) {
+      socket.emit("reset_room", { room });
+    }
+  }, [room]);
+
+  // CORRECTION : Fonction pour rejouer avec nettoyage
+  const handleReplay = () => {
+    if (room) {
+      socket.emit("reset_room", { room });
+    }
+    navigate("/lobby");
+  };
 
   return (
     <div
@@ -133,7 +149,7 @@ export default function EndGamePage() {
           </button>
 
           <button
-            onClick={() => navigate("/lobby")}
+            onClick={handleReplay} 
             style={{
               padding: "0.8rem 1.5rem",
               border: "2px solid #555",

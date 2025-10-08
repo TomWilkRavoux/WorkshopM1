@@ -25,6 +25,12 @@ export default function Lobby() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // ✅ CORRECTION : Réinitialiser les états du lobby au montage
+    setIsReady(false);
+    setReadyPlayers([]);
+    setTotalReady(0);
+    setGameStarted(false);
+
     socket.on("connect", () => {
       console.log("✅ Connecté au serveur Socket.IO !");
     });
@@ -46,19 +52,12 @@ export default function Lobby() {
     socket.on("all_players_ready", (data: ServerMessage) => {
       console.log("🎮 Tous les joueurs sont prêts !");
       setGameStarted(true);
-      
-      // Redirection après 2 secondes selon le rôle
-      setTimeout(() => {
-        if (role === "medecin") {
-          navigate("/medecin", { 
-            state: { username, room, role } 
-          });
-        } else if (role === "pharmacien") {
-          navigate("/pharmacien", { 
-            state: { username, room, role } 
-          });
-        }
-      }, 2000);
+    });
+
+    // ✅ NOUVEAU : Écouter la réinitialisation de room
+    socket.on("room_reset", (data: ServerMessage) => {
+      console.log("🔄 Room réinitialisée :", data.msg);
+      resetReady();
     });
 
     return () => {
@@ -67,13 +66,14 @@ export default function Lobby() {
       socket.off("server_message");
       socket.off("player_status_update");
       socket.off("all_players_ready");
+      socket.off("room_reset");
     };
   }, [navigate, role, username, room]);
 
   useEffect(() => {
     if (username && room) {
-      socket.emit("join_room", { username, room });
-      console.log(`🚪 Rejoindre la room ${room} avec ${username}`);
+      // ✅ CORRECTION : Réinitialiser la room quand on rejoint
+      socket.emit("reset_room", { room });
     }
   }, [username, room]);
   
@@ -97,22 +97,37 @@ export default function Lobby() {
     setIsReady(false);
     setReadyPlayers([]);
     setTotalReady(0);
+    setGameStarted(false);
+  };
+
+  // ✅ CORRECTION : Réinitialiser quand on change de room
+  const handleRoomChange = (newRoom: string) => {
+    setRoom(newRoom);
+    resetReady(); // Réinitialiser le statut ready
   };
 
   if (gameStarted) {
+    const targetRoute = role === "Médecin" ? "/medecin" : "/pharmacien";
+    
+    setTimeout(() => {
+      navigate(targetRoute, {
+        state: { username, room, role }
+      });
+    }, 2000);
+
     return (
       <div style={{ 
         padding: "2rem", 
         textAlign: "center",
-        background: "linear-gradient(135deg, #4A90E2, #50E3C2)",
+        background: "#4CAF50",
         color: "white",
-        height: "100vh",
+        minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
         justifyContent: "center"
       }}>
-        <h1>🎮 Lancement du jeu...</h1>
-        <p>Redirection vers votre interface {role}...</p>
+        <h1>🎮 Partie en cours de lancement...</h1>
+        <p>Redirection vers l'interface {role}...</p>
       </div>
     );
   }
@@ -126,127 +141,117 @@ export default function Lobby() {
       minHeight: "100vh"
     }}>
       <h1 style={{ textAlign: "center", marginBottom: "2rem" }}>
-        🏥 Lobby PharmaQuest
+        🏥 Lobby - PharmaQuest
       </h1>
       
-      <div style={{ 
-        background: "white", 
-        padding: "2rem", 
-        borderRadius: "10px",
-        marginBottom: "2rem"
-      }}>
-        <h2>Configuration du joueur</h2>
-        
+      <div style={{ marginBottom: "1rem" }}>
+        <label>👤 Nom d'utilisateur :</label>
         <input
-          placeholder="Nom d'utilisateur"
+          type="text"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           disabled={isReady}
-          style={{
-            width: "100%",
-            padding: "10px",
-            margin: "10px 0",
-            borderRadius: "5px",
-            border: "1px solid #ccc"
+          style={{ 
+            width: "100%", 
+            padding: "0.5rem", 
+            marginTop: "0.5rem",
+            border: "1px solid #ccc",
+            borderRadius: "4px"
           }}
         />
-        
-        <input
-          placeholder="Code de la Room"
-          value={room}
-          onChange={(e) => setRoom(e.target.value)}
-          disabled={isReady}
-          style={{
-            width: "100%",
-            padding: "10px",
-            margin: "10px 0",
-            borderRadius: "5px",
-            border: "1px solid #ccc"
-          }}
-        />
-        
-        <select 
-          value={role} 
-          onChange={(e) => setRole(e.target.value)}
-          disabled={isReady}
-          style={{
-            width: "100%",
-            padding: "10px",
-            margin: "10px 0",
-            borderRadius: "5px",
-            border: "1px solid #ccc"
-          }}
-        >
-          <option value="">Choisis ton rôle</option>
-          <option value="medecin">👨‍⚕️ Médecin</option>
-          <option value="pharmacien">💊 Pharmacien</option>
-        </select>
-        
-        <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
-          <button 
-            onClick={handleReady}
-            disabled={isReady || !username || !role || !room}
-            style={{
-              flex: 1,
-              padding: "15px",
-              borderRadius: "5px",
-              border: "none",
-              backgroundColor: isReady ? "#28a745" : "#007bff",
-              color: "white",
-              cursor: isReady ? "default" : "pointer",
-              opacity: (!username || !role || !room) ? 0.5 : 1
-            }}
-          >
-            {isReady ? "✅ Prêt" : "🚀 Je suis prêt"}
-          </button>
-          
-          {isReady && (
-            <button 
-              onClick={resetReady}
-              style={{
-                padding: "15px 20px",
-                borderRadius: "5px",
-                border: "none",
-                backgroundColor: "#dc3545",
-                color: "white",
-                cursor: "pointer"
-              }}
-            >
-              ❌ Annuler
-            </button>
-          )}
-        </div>
       </div>
 
-      {/* Status des joueurs */}
-      <div style={{
-        background: "white",
-        padding: "1.5rem",
-        borderRadius: "10px"
-      }}>
-        <h3>📊 Status de la partie</h3>
-        <p>Room: <strong>{room || "Non définie"}</strong></p>
-        <p>Joueurs prêts: <strong>{totalReady}/2</strong></p>
-        
-        {readyPlayers.length > 0 && (
-          <div>
-            <h4>Joueurs connectés:</h4>
-            <ul>
-              {readyPlayers.map((player, index) => (
-                <li key={index} style={{ margin: "5px 0" }}>
-                  ✅ {player}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        
-        {totalReady < 2 && (
-          <p style={{ color: "#666", fontStyle: "italic" }}>
-            En attente de {2 - totalReady} joueur(s) supplémentaire(s)...
-          </p>
-        )}
+      <div style={{ marginBottom: "1rem" }}>
+        <label>🏠 Salle :</label>
+        <input
+          type="text"
+          value={room}
+          onChange={(e) => handleRoomChange(e.target.value)} // ✅ Utiliser la nouvelle fonction
+          disabled={isReady}
+          style={{ 
+            width: "100%", 
+            padding: "0.5rem", 
+            marginTop: "0.5rem",
+            border: "1px solid #ccc",
+            borderRadius: "4px"
+          }}
+        />
       </div>
+
+      <div style={{ marginBottom: "2rem" }}>
+        <label>🎭 Rôle :</label>
+        <select
+          value={role}
+          onChange={(e) => setRole(e.target.value)}
+          disabled={isReady}
+          style={{ 
+            width: "100%", 
+            padding: "0.5rem", 
+            marginTop: "0.5rem",
+            border: "1px solid #ccc",
+            borderRadius: "4px"
+          }}
+        >
+          <option value="">-- Choisir un rôle --</option>
+          <option value="Médecin">👨‍⚕️ Médecin</option>
+          <option value="Pharmacien">💊 Pharmacien</option>
+        </select>
+      </div>
+
+      {!isReady ? (
+        <button
+          onClick={handleReady}
+          disabled={!username || !role || !room}
+          style={{
+            width: "100%",
+            padding: "1rem",
+            backgroundColor: "#4CAF50",
+            color: "white",
+            border: "none",
+            borderRadius: "8px",
+            fontSize: "1.1rem",
+            cursor: "pointer"
+          }}
+        >
+          ✅ Je suis prêt !
+        </button>
+      ) : (
+        <div style={{ textAlign: "center" }}>
+          <p style={{ color: "#4CAF50", fontWeight: "bold" }}>
+            ✅ Vous êtes prêt ! En attente des autres joueurs...
+          </p>
+          <button
+            onClick={resetReady}
+            style={{
+              padding: "0.5rem 1rem",
+              backgroundColor: "#f44336",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer"
+            }}
+          >
+            ❌ Annuler
+          </button>
+        </div>
+      )}
+
+      {/* ✅ AJOUT : Affichage des joueurs prêts avec votre design */}
+      {totalReady > 0 && (
+        <div style={{ 
+          marginTop: "2rem", 
+          padding: "1rem", 
+          backgroundColor: "#e3f2fd", 
+          borderRadius: "8px" 
+        }}>
+          <h3>👥 Joueurs prêts ({totalReady}/2) :</h3>
+          <ul>
+            {readyPlayers.map((player, index) => (
+              <li key={index}>🎮 {player}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

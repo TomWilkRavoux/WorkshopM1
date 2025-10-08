@@ -4,7 +4,7 @@ import time
 import threading
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")  # on force le serveur Flask-SocketIO sur le front React (à modifier)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Solutions correctes pour chaque maladie
 SOLUTIONS = {
@@ -20,8 +20,6 @@ rooms = {}
 def test():
     return {"message": "Backend Flask prêt"}
 
-@app.route("/lobby")
-
 @socketio.on("connect")
 def on_connect():
     print("✅ Un client est connecté !")
@@ -31,8 +29,6 @@ def on_connect():
 def on_disconnect():
     print("❌ Un client s'est déconnecté.")
 
-# Test accès aux rooms
-
 @socketio.on("join_room")
 def join_room_event(data):
     username = data.get("username")
@@ -40,8 +36,31 @@ def join_room_event(data):
 
     join_room(room)
     print(f"👤 {username} a rejoint la salle {room}")
-
+    
+    # Si la room existe et a des joueurs prêts, les envoyer au nouveau joueur
+    if room in rooms and rooms[room]["ready_players"]:
+        emit("player_status_update", {
+            "ready_players": list(rooms[room]["ready_players"].keys()),
+            "total_ready": len(rooms[room]["ready_players"])
+        })
+        print(f"📊 Envoi du statut actuel à {username}: {list(rooms[room]['ready_players'].keys())}")
+    
     emit("server_message", {"msg": f"{username} a rejoint la salle {room}"}, to=room)
+
+# Événement pour réinitialiser une room (seulement quand nécessaire)
+@socketio.on("reset_room")
+def reset_room(data):
+    room = data.get("room")
+    if room in rooms:
+        # Arrêter le timer s'il existe
+        if rooms[room].get("thread"):
+            rooms[room]["game_over"] = True
+            rooms[room]["thread"] = None
+        
+        # Réinitialiser complètement la room
+        del rooms[room]
+        print(f"🔄 Room {room} réinitialisée")
+        emit("room_reset", {"msg": "Room réinitialisée"}, room=room)
 
 @socketio.on("player_ready")
 def player_ready(data):
@@ -49,7 +68,29 @@ def player_ready(data):
     room = data.get("room")
     role = data.get("role")
     
+    print(f"🎮 Player ready reçu: {username} ({role}) dans {room}")
+    
+    # Créer la room si elle n'existe pas
     if room not in rooms:
+        rooms[room] = {
+            "users": set(), 
+            "timer": 0, 
+            "thread": None, 
+            "ready_players": {},
+            "diagnosis": None,
+            "medications": [],
+            "game_over": False
+        }
+        print(f"🏠 Nouvelle room créée: {room}")
+    
+    #Seulement réinitialiser si le jeu était vraiment terminé ET qu'on essaie de rejouer
+    if rooms[room].get("game_over", False):
+        print(f"🔄 Game over détecté, réinitialisation de {room}")
+        # Arrêter l'ancien thread s'il existe
+        if rooms[room].get("thread"):
+            rooms[room]["thread"] = None
+        
+        # Réinitialiser la room
         rooms[room] = {
             "users": set(), 
             "timer": 0, 
@@ -62,34 +103,57 @@ def player_ready(data):
     
     # Ajouter le joueur comme prêt
     rooms[room]["ready_players"][username] = {"role": role, "ready": True}
+    print(f"📊 Joueurs prêts dans {room}: {list(rooms[room]['ready_players'].keys())}")
     
+    # Messages à toute la room
     emit("server_message", {"msg": f"{username} ({role}) est prêt !"}, room=room)
+    
+    # ✅ IMPORTANT : Toujours envoyer le statut à TOUTE la room
     emit("player_status_update", {
         "ready_players": list(rooms[room]["ready_players"].keys()),
         "total_ready": len(rooms[room]["ready_players"])
     }, room=room)
     
-    # Vérifier si 2 joueurs sont prêts
+    print(f"📡 Status envoyé à la room {room}: {len(rooms[room]['ready_players'])} joueurs")
+    
+    # Vérifier si on peut démarrer (2 joueurs avec rôles différents)
     if len(rooms[room]["ready_players"]) >= 2:
-        emit("all_players_ready", {"msg": "Tous les joueurs sont prêts ! Lancement du jeu..."}, room=room)
+        roles = [player["role"] for player in rooms[room]["ready_players"].values()]
+        has_medecin = "Médecin" in roles
+        has_pharmacien = "Pharmacien" in roles
         
-        # Démarrer automatiquement le timer de 10 minutes (600 secondes)
-        if not rooms[room]["thread"]:
-            t = threading.Thread(target=start_timer, args=(room, 600))  # 10 minutes
-            rooms[room]["thread"] = t
-            t.start()
-            emit("game_started", {"msg": "🎮 Partie démarrée ! Vous avez 10 minutes.", "duration": 600}, room=room)
+        print(f"🎭 Rôles présents: {roles}")
         
-        print(f"[GAME START] Room {room} - 2 joueurs prêts, timer lancé")
+        if has_medecin and has_pharmacien:
+            emit("all_players_ready", {"msg": "Tous les joueurs sont prêts ! Lancement du jeu..."}, room=room)
+            
+            # Démarrer le timer seulement si aucun n'est en cours
+            if not rooms[room]["thread"]:
+                t = threading.Thread(target=start_timer, args=(room, 600))
+                rooms[room]["thread"] = t
+                t.start()
+                emit("game_started", {"msg": "🎮 Partie démarrée ! Vous avez 10 minutes.", "duration": 600}, room=room)
+            
+            print(f"[GAME START] Room {room} - 2 joueurs prêts (Médecin + Pharmacien), timer lancé")
+        else:
+            emit("server_message", {"msg": "⚠️ Il faut un Médecin ET un Pharmacien pour commencer !"}, room=room)
+            print(f"⚠️ Rôles incomplets dans {room}: {roles}")
 
-##########################################################################################################################################################
+# Fonctions existantes...
+def cleanup_room(room):
+    if room in rooms:
+        if rooms[room].get("thread"):
+            rooms[room]["game_over"] = True
+            rooms[room]["thread"] = None
+        print(f"🧹 Nettoyage de la room {room}")
+
 @socketio.on("submit_diagnosis")
 def submit_diagnosis(data):
     username = data.get("username")
     room = data.get("room")
     diagnosis = data.get("diagnosis")
     
-    if room not in rooms or rooms[room]["game_over"]:
+    if room not in rooms or rooms[room].get("game_over", False):
         return
     
     rooms[room]["diagnosis"] = diagnosis
@@ -106,7 +170,7 @@ def submit_medication(data):
     room = data.get("room")
     medication = data.get("medication")
     
-    if room not in rooms or rooms[room]["game_over"]:
+    if room not in rooms or rooms[room].get("game_over", False):
         return
     
     if medication not in rooms[room]["medications"]:
@@ -124,11 +188,13 @@ def submit_medication(data):
 def validate_solution(data):
     room = data.get("room")
     
-    if room not in rooms or rooms[room]["game_over"]:
+    if room not in rooms or rooms[room].get("game_over", False):
         return
     
     diagnosis = rooms[room]["diagnosis"]
     medications = rooms[room]["medications"]
+    
+    print(f"[VALIDATION] Room {room} - Diagnostic: {diagnosis}, Médicaments: {medications}")
     
     # Vérifier si la solution est correcte
     if diagnosis in SOLUTIONS:
@@ -139,6 +205,7 @@ def validate_solution(data):
             # Victoire !
             rooms[room]["game_over"] = True
             rooms[room]["timer"] = 0
+            print(f"[VICTOIRE] Room {room}")
             emit("game_result", {
                 "result": "victory",
                 "diagnosis": diagnosis,
@@ -148,6 +215,7 @@ def validate_solution(data):
             # Défaite - mauvais médicaments
             rooms[room]["game_over"] = True
             rooms[room]["timer"] = 0
+            print(f"[DÉFAITE] Room {room} - Mauvais médicaments")
             emit("game_result", {
                 "result": "defeat",
                 "reason": "wrong_medications",
@@ -159,13 +227,13 @@ def validate_solution(data):
         # Défaite - mauvais diagnostic
         rooms[room]["game_over"] = True
         rooms[room]["timer"] = 0
+        print(f"[DÉFAITE] Room {room} - Mauvais diagnostic")
         emit("game_result", {
             "result": "defeat",
             "reason": "wrong_diagnosis",
             "diagnosis": diagnosis,
             "medications": medications
         }, room=room)
-##########################################################################################################################################################
 
 @socketio.on("chat_message")
 def chat(data):
@@ -177,21 +245,23 @@ def chat(data):
 
 def start_timer(room, duration):
     print(f"[TIMER] Lancement du timer {duration}s pour {room}")
-    rooms[room]["timer"] = duration
-    while rooms[room]["timer"] > 0 and not rooms[room]["game_over"]:
-        time.sleep(1)
-        rooms[room]["timer"] -= 1
-        socketio.emit("timer_update", {"time": rooms[room]["timer"]}, room=room)
-    
-    if not rooms[room]["game_over"]:
-        # Temps écoulé = défaite
-        rooms[room]["game_over"] = True
-        socketio.emit("game_result", {
-            "result": "defeat",
-            "reason": "timeout"
-        }, room=room)
-    
-    rooms[room]["thread"] = None
+    if room in rooms:
+        rooms[room]["timer"] = duration
+        while rooms[room]["timer"] > 0 and not rooms[room].get("game_over", False):
+            time.sleep(1)
+            rooms[room]["timer"] -= 1
+            socketio.emit("timer_update", {"time": rooms[room]["timer"]}, room=room)
+        
+        if not rooms[room].get("game_over", False):
+            # Temps écoulé = défaite
+            rooms[room]["game_over"] = True
+            print(f"[TIMEOUT] Room {room}")
+            socketio.emit("game_result", {
+                "result": "defeat",
+                "reason": "timeout"
+            }, room=room)
+        
+        rooms[room]["thread"] = None
 
 @socketio.on("start_game")
 def start_game(data):
@@ -200,7 +270,7 @@ def start_game(data):
     if room not in rooms:
         rooms[room] = {"users": set(), "timer": duration, "thread": None}
 
-    if not rooms[room]["thread"]:
+    if not rooms[room].get("thread"):
         t = threading.Thread(target=start_timer, args=(room, duration))
         rooms[room]["thread"] = t
         t.start()

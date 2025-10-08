@@ -136,7 +136,7 @@ export default function MedecinPage() {
             });
         };
 
-        // ✅ Écouter les événements de diagnostic du pharmacien
+        // Écouter les événements de diagnostic du pharmacien
         const handleDiagnosisSubmitted = (data: any) => {
             setMessages(prev => [...prev, `[INFO] Diagnostic envoyé: ${data.diagnosis}`]);
         };
