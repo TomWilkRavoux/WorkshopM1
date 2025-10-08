@@ -1,3 +1,4 @@
+import os
 from flask import Flask
 from flask_socketio import SocketIO, emit, join_room, leave_room
 import time
@@ -278,6 +279,11 @@ def start_game(data):
     else:
         emit("server_message", {"msg": "⚠️ Une partie est déjà en cours."}, room=room)
 
+# if __name__ == "__main__":
+#     socketio.run(app, host="0.0.0.0", port=5000)
+#     print("🚀 Serveur Flask démarré sur http://localhost:5000")
+
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=5000)
-    print("🚀 Serveur Flask démarré sur http://localhost:5000")
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host="0.0.0.0", port=port)
+    print(f"🚀 Serveur Flask démarré sur le port {port}")
