@@ -220,9 +220,7 @@ export default function PharmacienPage() {
             const newMedications = [...selectedMedications, med.nom];
             setSelectedMedications(newMedications);
             setSelectedMed(med); //test du focus sur la dernière sélection
-            console.log("Médicament sélectionné :", med.nom);
-            console.log("Médicaments actuellement sélectionnés :", newMedications);
-
+            
             socket.emit("submit_medication", {
                 username,
                 room,
@@ -243,8 +241,7 @@ export default function PharmacienPage() {
     const removeMedication = (medName: string) => {
         setSelectedMedications(prev => {
         const updated = prev.filter(name => name !== medName);
-        console.log("Médicament retiré :", medName);
-        console.log("Médicaments restants :", updated);
+        
         return updated;
     });
     };
