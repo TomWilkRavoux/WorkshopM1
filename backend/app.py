@@ -1,11 +1,29 @@
 import os
 from flask import Flask
 from flask_socketio import SocketIO, emit, join_room, leave_room
+from flask_cors import CORS
 import time
 import threading
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")
+# Configuration CORS sécurisée
+ALLOWED_ORIGINS = [
+    "https://workshop-m1.vercel.app",  # ⚠️ Remplacez par votre URL Vercel
+    "http://localhost:5173",  # Pour le développement local
+    "http://localhost:3000"   # Au cas où
+]
+
+# ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+
+CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS}})
+
+socketio = SocketIO(
+    app, 
+    cors_allowed_origins=ALLOWED_ORIGINS,
+    async_mode='threading',
+    ping_timeout=60,
+    ping_interval=25
+)
 
 # Solutions correctes pour chaque maladie
 SOLUTIONS = {
@@ -108,8 +126,8 @@ def player_ready(data):
     
     # Messages à toute la room
     emit("server_message", {"msg": f"{username} ({role}) est prêt !"}, room=room)
-    
-    # ✅ IMPORTANT : Toujours envoyer le statut à TOUTE la room
+
+    # Toujours envoyer le statut à TOUTE la room
     emit("player_status_update", {
         "ready_players": list(rooms[room]["ready_players"].keys()),
         "total_ready": len(rooms[room]["ready_players"])
