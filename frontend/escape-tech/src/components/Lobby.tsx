@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
 
-const socket: Socket = io("http://localhost:5000");
+const socket: Socket = io(import.meta.env.VITE_BACKEND_URL || "http://localhost:5000");
+
 
 interface PlayerStatusUpdate {
   ready_players: string[];
