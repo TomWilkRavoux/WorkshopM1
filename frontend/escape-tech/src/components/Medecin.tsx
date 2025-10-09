@@ -161,6 +161,11 @@ export default function PharmacienPage() {
             setMessages(prev => [...prev, `[MÉDICAMENT] ${data.username}: ${data.medication}`]);
         };
 
+        const handleMedicationRemoved = (data: any) => {
+            console.log(`Médicament retiré: ${data.medication}`);
+        };
+
+    socket.on("medication_removed", handleMedicationRemoved);
         const handleGameResult = (data: any) => {
             navigate("/endgame", {
                 state: {
@@ -178,6 +183,7 @@ export default function PharmacienPage() {
         socket.on("chat_response", handleChatResponse);
         socket.on("timer_update", handleTimerUpdate);
         socket.on("game_started", handleGameStarted);
+        socket.on("medication_removed", handleMedicationRemoved);
         socket.on("diagnosis_submitted", handleDiagnosisSubmitted);
         socket.on("medication_submitted", handleMedicationSubmitted);
         socket.on("game_result", handleGameResult);
@@ -187,6 +193,7 @@ export default function PharmacienPage() {
         socket.off("chat_response", handleChatResponse);
         socket.off("timer_update", handleTimerUpdate);
         socket.off("game_started", handleGameStarted);
+        socket.off("medication_removed", handleMedicationRemoved);
         socket.off("diagnosis_submitted", handleDiagnosisSubmitted);
         socket.off("medication_submitted", handleMedicationSubmitted);
         socket.off("game_result", handleGameResult);
@@ -219,6 +226,7 @@ export default function PharmacienPage() {
         if (!selectedMedications.includes(med.nom)) {
             const newMedications = [...selectedMedications, med.nom];
             setSelectedMedications(newMedications);
+            setSelectedMed(med); //test du focus sur la dernière sélection
             
             socket.emit("submit_medication", {
                 username,
@@ -238,7 +246,18 @@ export default function PharmacienPage() {
     };
 
     const removeMedication = (medName: string) => {
-        setSelectedMedications(prev => prev.filter(name => name !== medName));
+        setSelectedMedications(prev => {
+            const updated = prev.filter(name => name !== medName);
+            
+            // ✅ Émettre l'événement de suppression au backend
+            socket.emit("remove_medication", {
+                username,
+                room,
+                medication: medName
+            });
+            
+            return updated;
+        });
     };
 
     return (
