@@ -73,7 +73,7 @@ function RoomTest() {
     };
 
     const startGame = () => {
-        socket.emit("start_game", { room, duration: 15 }); // 15s pour test
+        socket.emit("start_game", { room, duration: 15 });
     };
 
     const handleChange =

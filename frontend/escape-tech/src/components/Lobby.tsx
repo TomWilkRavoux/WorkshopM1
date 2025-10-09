@@ -26,7 +26,7 @@ export default function Lobby() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // ✅ CORRECTION : Réinitialiser les états du lobby au montage
+    //Réinitialiser les états du lobby au montage
     setIsReady(false);
     setReadyPlayers([]);
     setTotalReady(0);
@@ -55,7 +55,7 @@ export default function Lobby() {
       setGameStarted(true);
     });
 
-    // ✅ NOUVEAU : Écouter la réinitialisation de room
+    //Écouter la réinitialisation de room
     socket.on("room_reset", (data: ServerMessage) => {
       console.log("🔄 Room réinitialisée :", data.msg);
       resetReady();
@@ -73,7 +73,7 @@ export default function Lobby() {
 
   useEffect(() => {
     if (username && room) {
-      // ✅ CORRECTION : Réinitialiser la room quand on rejoint
+      //Réinitialiser la room quand on rejoint
       socket.emit("reset_room", { room });
     }
   }, [username, room]);
@@ -101,7 +101,7 @@ export default function Lobby() {
     setGameStarted(false);
   };
 
-  // ✅ CORRECTION : Réinitialiser quand on change de room
+  //Réinitialiser quand on change de room
   const handleRoomChange = (newRoom: string) => {
     setRoom(newRoom);
     resetReady(); // Réinitialiser le statut ready
@@ -167,7 +167,7 @@ export default function Lobby() {
         <input
           type="text"
           value={room}
-          onChange={(e) => handleRoomChange(e.target.value)} // ✅ Utiliser la nouvelle fonction
+          onChange={(e) => handleRoomChange(e.target.value)}
           disabled={isReady}
           style={{ 
             width: "100%", 
@@ -237,7 +237,7 @@ export default function Lobby() {
         </div>
       )}
 
-      {/* ✅ AJOUT : Affichage des joueurs prêts avec votre design */}
+      {/* Affichage des joueurs */}
       {totalReady > 0 && (
         <div style={{ 
           marginTop: "2rem", 

@@ -93,7 +93,7 @@ export default function PharmacienPage() {
     const [selectedMed, setSelectedMed] = useState<Medicament | null>(null);
     const [medicaments, setMedicaments] = useState<Medicament[]>([]);
     const [notifications, setNotifications] = useState<Notification[]>([]);
-    const [timer, setTimer] = useState<number | null>(null); // Nouveau state pour le timer
+    const [timer, setTimer] = useState<number | null>(null);
     const [selectedMedications, setSelectedMedications] = useState<string[]>([]);
     const [diagnosisReceived, setDiagnosisReceived] = useState<string | null>(null);
 

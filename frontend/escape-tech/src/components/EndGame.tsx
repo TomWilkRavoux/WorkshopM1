@@ -49,13 +49,13 @@ export default function EndGamePage() {
   useEffect(() => {
     window.scrollTo(0, 0);
     
-    // CORRECTION : Nettoyer la room quand on arrive sur EndGame
+    // Nettoyer la room quand on arrive sur EndGame
     if (room) {
       socket.emit("reset_room", { room });
     }
   }, [room]);
 
-  // CORRECTION : Fonction pour rejouer avec nettoyage
+
   const handleReplay = () => {
     if (room) {
       socket.emit("reset_room", { room });
