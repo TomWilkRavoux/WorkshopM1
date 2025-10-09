@@ -219,7 +219,10 @@ export default function PharmacienPage() {
         if (!selectedMedications.includes(med.nom)) {
             const newMedications = [...selectedMedications, med.nom];
             setSelectedMedications(newMedications);
-            
+            setSelectedMed(med); //test du focus sur la dernière sélection
+            console.log("Médicament sélectionné :", med.nom);
+            console.log("Médicaments actuellement sélectionnés :", newMedications);
+
             socket.emit("submit_medication", {
                 username,
                 room,
@@ -235,13 +238,15 @@ export default function PharmacienPage() {
         }
         
         socket.emit("validate_solution", { room });
-
-        setSelectedMedications([]);
-        setSelectedMed(null);
     };
 
     const removeMedication = (medName: string) => {
-        setSelectedMedications(prev => prev.filter(name => name !== medName));
+        setSelectedMedications(prev => {
+        const updated = prev.filter(name => name !== medName);
+        console.log("Médicament retiré :", medName);
+        console.log("Médicaments restants :", updated);
+        return updated;
+    });
     };
 
     return (
