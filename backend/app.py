@@ -184,6 +184,29 @@ def submit_medication(data):
         "current_medications": rooms[room]["medications"]
     }, room=room)
 
+
+
+@socketio.on("remove_medication")
+def remove_medication(data):
+    username = data.get("username")
+    room = data.get("room")
+    medication = data.get("medication")
+    
+    if room not in rooms or rooms[room].get("game_over", False):
+        return
+    
+    if medication in rooms[room]["medications"]:
+        rooms[room]["medications"].remove(medication)
+    
+    print(f"[MEDICATION REMOVED] {room} - {username}: {medication}")
+    
+    emit("medication_removed", {
+        "username": username,
+        "medication": medication,
+        "current_medications": rooms[room]["medications"]
+    }, room=room)
+
+
 @socketio.on("validate_solution")
 def validate_solution(data):
     room = data.get("room")
