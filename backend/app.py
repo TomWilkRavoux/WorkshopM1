@@ -1,29 +1,13 @@
 import os
 from flask import Flask
 from flask_socketio import SocketIO, emit, join_room, leave_room
-from flask_cors import CORS
 import time
 import threading
 
 app = Flask(__name__)
-# Configuration CORS sécurisée
-ALLOWED_ORIGINS = [
-    "https://workshop-m1.vercel.app",  # ⚠️ Remplacez par votre URL Vercel
-    "http://localhost:5173",  # Pour le développement local
-    "http://localhost:3000"   # Au cas où
-]
+socketio = SocketIO(app, cors_allowed_origins="*")
 
-# ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
 
-CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS}})
-
-socketio = SocketIO(
-    app, 
-    cors_allowed_origins=ALLOWED_ORIGINS,
-    async_mode='threading',
-    ping_timeout=60,
-    ping_interval=25
-)
 
 # Solutions correctes pour chaque maladie
 SOLUTIONS = {
