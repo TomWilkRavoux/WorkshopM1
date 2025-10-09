@@ -235,6 +235,9 @@ export default function PharmacienPage() {
         }
         
         socket.emit("validate_solution", { room });
+
+        setSelectedMedications([]);
+        setSelectedMed(null);
     };
 
     const removeMedication = (medName: string) => {
